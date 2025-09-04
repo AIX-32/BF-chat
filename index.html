@@ -1362,10 +1362,15 @@ async function writePartyData(partyId, partyData) {
     
     console.log(`🌐 [${user?.username || user?.uuid || 'Unknown'}] Writing party data for CROSS-USER access: ${partyId}`);
     
-    // PRIMARY: Hosting approach for cross-user access - ALWAYS ENABLED
-    try {
-        console.log(`🚀 Setting up hosting for cross-user access...`);
-        const htmlContent = `<!DOCTYPE html>
+    // Check if current user is the host (can update hosting endpoint)
+    const isHost = partyData.host === (user?.username || user?.uuid);
+    console.log(`[${user?.username || user?.uuid || 'Unknown'}] User is ${isHost ? 'HOST' : 'PARTICIPANT'} for party ${partyId}`);
+    
+    // PRIMARY: Hosting approach for cross-user access - ONLY if user is host
+    if (isHost) {
+        try {
+            console.log(`🚀 Setting up hosting for cross-user access...`);
+            const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
     <title>Party Data ${partyId}</title>
@@ -1381,33 +1386,36 @@ async function writePartyData(partyId, partyData) {
 </head>
 <body></body>
 </html>`;
-        
-        const hostingDir = `party-hosting-${partyId}`;
-        await puter.fs.mkdir(hostingDir, { createMissingParents: true });
-        await puter.fs.write(`${hostingDir}/index.html`, htmlContent, { overwrite: true });
-        await puter.fs.write(`${hostingDir}/data.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
-        
-        const subdomain = `party-data-${partyId.toLowerCase()}`;
-        try {
-            await puter.hosting.create(subdomain, hostingDir);
-            console.log(`✅ Party ${partyId} hosted for cross-user access: https://${subdomain}.puter.site`);
-            success = true;
-        } catch (e) {
-            if (e.message.includes('already exists')) {
-                await puter.hosting.update(subdomain, hostingDir);
-                console.log(`✅ Party ${partyId} updated for cross-user access: https://${subdomain}.puter.site`);
+            
+            const hostingDir = `party-hosting-${partyId}`;
+            await puter.fs.mkdir(hostingDir, { createMissingParents: true });
+            await puter.fs.write(`${hostingDir}/index.html`, htmlContent, { overwrite: true });
+            await puter.fs.write(`${hostingDir}/data.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
+            
+            const subdomain = `party-data-${partyId.toLowerCase()}`;
+            try {
+                await puter.hosting.create(subdomain, hostingDir);
+                console.log(`✅ Party ${partyId} hosted for cross-user access: https://${subdomain}.puter.site`);
                 success = true;
-            } else {
-                errors.push(`Hosting error: ${e.message}`);
-                console.error(`❌ Hosting error for party ${partyId}:`, e);
+            } catch (e) {
+                if (e.message.includes('already exists')) {
+                    await puter.hosting.update(subdomain, hostingDir);
+                    console.log(`✅ Party ${partyId} updated for cross-user access: https://${subdomain}.puter.site`);
+                    success = true;
+                } else {
+                    errors.push(`Hosting error: ${e.message}`);
+                    console.error(`❌ Hosting error for party ${partyId}:`, e);
+                }
             }
+        } catch (error) {
+            errors.push(`Hosting setup error: ${error.message}`);
+            console.error(`❌ Hosting setup error for party ${partyId}:`, error);
         }
-    } catch (error) {
-        errors.push(`Hosting setup error: ${error.message}`);
-        console.error(`❌ Hosting setup error for party ${partyId}:`, error);
+    } else {
+        console.log(`⏭️ Skipping hosting update - user is not host for party ${partyId}`);
     }
     
-    // BACKUP: Direct file storage (with retry logic)
+    // BACKUP: Direct file storage (with retry logic) - ALL users can do this
     let fileAttempts = 0;
     while (fileAttempts < 3) {
         try {
@@ -1426,7 +1434,7 @@ async function writePartyData(partyId, partyData) {
         }
     }
     
-    // BACKUP: KV store (with retry logic)
+    // BACKUP: KV store (with retry logic) - ALL users can do this
     let kvAttempts = 0;
     while (kvAttempts < 3) {
         try {
