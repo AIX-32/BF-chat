@@ -458,24 +458,64 @@ html, body {
 <script>
 // Using Puter.js KV store for persistent party system
 let user, partyId, pollInterval;
+let lastMessageTime = 0;
+const MESSAGE_COOLDOWN = 1000; // 1 second cooldown between messages
+
+// Initialize app on page load
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        // Check if user is already signed in
+        if (puter.auth.isSignedIn()) {
+            user = await puter.auth.getUser();
+            document.getElementById("authSection").style.display = "none";
+            document.getElementById("partyActions").classList.add("visible");
+            showStatusMessage(`Welcome back, ${user.username || user.uuid}!`, "success");
+        }
+    } catch (error) {
+        console.log('User not signed in:', error);
+    }
+});
 
 // Sign-in
 document.getElementById("signIn").addEventListener("click", async () => {
-    await puter.auth.signIn();
-    user = await puter.auth.getUser();
-    
-    // Hide auth section and show party actions
-    document.getElementById("authSection").style.display = "none";
-    document.getElementById("partyActions").classList.add("visible");
-    
-    showStatusMessage(`Welcome, ${user.username || user.uuid}!`, "success");
+    try {
+        await puter.auth.signIn();
+        user = await puter.auth.getUser();
+        
+        // Hide auth section and show party actions
+        document.getElementById("authSection").style.display = "none";
+        document.getElementById("partyActions").classList.add("visible");
+        
+        showStatusMessage(`Welcome, ${user.username || user.uuid}!`, "success");
+    } catch (error) {
+        showStatusMessage(`Sign-in failed: ${error.message}`, "error");
+        console.error('Sign-in error:', error);
+    }
 });
 
 // Create party
 document.getElementById("createPartyBtn").addEventListener("click", async () => {
     try {
-        // Generate a random party ID
-        partyId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        // Check if user is authenticated
+        if (!user) {
+            showStatusMessage("Please sign in first!", "error");
+            return;
+        }
+        
+        // Generate a random 6-character party ID with uppercase letters and numbers
+        let attempts = 0;
+        do {
+            partyId = generatePartyCode();
+            attempts++;
+            // Check if party code already exists
+            const existingParty = await puter.kv.get(`party_${partyId}`);
+            if (!existingParty) break;
+        } while (attempts < 10); // Try up to 10 times
+        
+        if (attempts >= 10) {
+            showStatusMessage("Failed to generate unique party code. Please try again.", "error");
+            return;
+        }
         
         // Create party data structure
         const partyData = {
@@ -488,6 +528,9 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
         
         // Store party in KV store
         await puter.kv.set(`party_${partyId}`, partyData);
+        
+        console.log(`Party created with ID: ${partyId}`);
+        console.log('Party data stored:', partyData);
         
         showStatusMessage(`Party created! Share code: ${partyId}`, "success");
         document.getElementById("partyInfo").classList.add("visible");
@@ -507,16 +550,32 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
 // Join party
 document.getElementById("joinPartyBtn").addEventListener("click", async () => {
     try {
+        // Check if user is authenticated
+        if (!user) {
+            showStatusMessage("Please sign in first!", "error");
+            return;
+        }
+        
         const code = prompt("Enter Party Code:");
         if (!code) return;
         
-        partyId = code.toUpperCase();
+        // Clean and validate the party code
+        partyId = code.trim().toUpperCase();
+        
+        // Validate party code format (6 characters, letters and numbers only)
+        if (!/^[A-Z0-9]{6}$/.test(partyId)) {
+            showStatusMessage("Invalid party code format! Please enter a 6-character code.", "error");
+            return;
+        }
         
         // Get existing party data
         const partyData = await puter.kv.get(`party_${partyId}`);
         
+        console.log(`Attempting to join party: ${partyId}`);
+        console.log('Party data retrieved:', partyData);
+        
         if (!partyData) {
-            showStatusMessage("Party not found! Please check the code.", "error");
+            showStatusMessage(`Party "${partyId}" not found! Please check the code and try again.`, "error");
             return;
         }
         
@@ -617,7 +676,7 @@ function startPolling() {
 
 // Update UI with latest party data
 async function updateUI() {
-    if (!partyId) return;
+    if (!partyId || !user) return;
     
     try {
         const partyData = await puter.kv.get(`party_${partyId}`);
@@ -661,6 +720,17 @@ async function updateUI() {
         updateChatUI(partyData.messages);
     } catch (error) {
         console.error("Error updating UI:", error);
+        if (error.message.includes('authentication') || error.message.includes('unauthorized')) {
+            showStatusMessage("Session expired. Please sign in again.", "error");
+            // Reset to sign-in state
+            user = null;
+            clearInterval(pollInterval);
+            partyId = null;
+            document.getElementById("authSection").style.display = "block";
+            document.getElementById("partyActions").classList.remove("visible");
+            document.getElementById("partyInfo").classList.remove("visible");
+            document.getElementById("chatContainer").classList.remove("visible");
+        }
     }
 }
 
@@ -730,10 +800,31 @@ document.addEventListener("keydown", (e) => {
     }
 });
 
+// Cleanup on page unload
+window.addEventListener('beforeunload', () => {
+    if (pollInterval) {
+        clearInterval(pollInterval);
+    }
+});
+
 async function sendMessage() {
     const input = document.getElementById("chatInput");
     const message = input.value.trim();
     if (!message || !partyId) return;
+    
+    // Check if user is authenticated
+    if (!user) {
+        showStatusMessage("Please sign in first!", "error");
+        return;
+    }
+    
+    // Rate limiting
+    const now = Date.now();
+    if (now - lastMessageTime < MESSAGE_COOLDOWN) {
+        showStatusMessage("Please wait before sending another message.", "error");
+        return;
+    }
+    lastMessageTime = now;
     
     try {
         const partyData = await puter.kv.get(`party_${partyId}`);
@@ -746,7 +837,7 @@ async function sendMessage() {
         const chatMessage = {
             id: Date.now(),
             user: user.username || user.uuid,
-            message: message,
+            message: sanitizeHTML(message),
             timestamp: new Date().toLocaleTimeString(),
             type: 'user'
         };
@@ -793,6 +884,23 @@ function updateChatUI(messages) {
         }
     }).join("");
     chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+// Generate a proper 6-character party code with uppercase letters and numbers
+function generatePartyCode() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = '';
+    for (let i = 0; i < 6; i++) {
+        result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+}
+
+// Sanitize HTML to prevent XSS attacks
+function sanitizeHTML(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function showStatusMessage(message, type = "error") {
