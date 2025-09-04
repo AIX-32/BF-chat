@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Puter.js Party System</title>
+<script src="https://js.puter.com/v2/"></script>
+<style>
+  body { font-family: sans-serif; background:#111; color:#eee; text-align:center; padding:2rem;}
+  button { margin:0.5rem; padding:0.6rem 1rem; border:none; border-radius:8px; background:#333; color:#eee; cursor:pointer; transition: background 0.2s;}
+  button:hover { background:#444; }
+  button:disabled { background:#222; cursor: not-allowed; }
+  #partyInfo { margin-top:2rem; background:#222; padding:1rem; border-radius:10px; }
+  #chatContainer { margin-top:2rem; background:#222; padding:1rem; border-radius:10px; display:none; text-align:left; max-width:600px; margin-left:auto; margin-right:auto; }
+  #chatMessages { height:300px; overflow-y:auto; background:#111; padding:1rem; border-radius:5px; margin-bottom:1rem; }
+  #chatInput { width:70%; padding:0.5rem; border:none; border-radius:5px; background:#333; color:#eee; }
+  #sendBtn { width:25%; }
+  .message { margin-bottom:0.5rem; padding:0.5rem; background:#333; border-radius:5px; word-wrap: break-word; }
+  .system-message { background:#444; font-style: italic; color: #aaa; }
+  .error { color:#ff6b6b; margin-top:1rem; }
+  .success { color:#4ade80; margin-top:1rem; }
+  .party-code { font-family: monospace; font-size: 1.2em; font-weight: bold; color: #4ade80; }
+  .host-crown { color: #fbbf24; }
+</style>
+</head>
+<body>
+
+<h1>🎉 Party System</h1>
+
+<button id="signIn">Sign In</button>
+
+<div id="partyActions" style="display:none;">
+  <button id="createPartyBtn">Create Party</button>
+  <button id="joinPartyBtn">Join Party</button>
+  <button id="leavePartyBtn">Leave Party</button>
+</div>
+
+<div id="partyInfo"></div>
+<div id="error"></div>
+
+<div id="chatContainer">
+  <h3>💬 Party Chat</h3>
+  <div id="chatMessages"></div>
+  <div>
+    <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200">
+    <button id="sendBtn">Send</button>
+  </div>
+</div>
+
+<script>
+// Using Puter.js KV store for persistent party system
+let user, partyId, pollInterval;
+
+// Sign-in
+document.getElementById("signIn").addEventListener("click", async () => {
+    await puter.auth.signIn();
+    user = await puter.auth.getUser();
+    document.getElementById("partyInfo").innerHTML = `<p>Welcome, ${user.username || user.uuid}</p>`;
+    document.getElementById("signIn").style.display = "none";
+    document.getElementById("partyActions").style.display = "block";
+});
+
+// Create party
+document.getElementById("createPartyBtn").addEventListener("click", async () => {
+    try {
+        // Generate a random party ID
+        partyId = Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // Create party data structure
+        const partyData = {
+            id: partyId,
+            host: user.username || user.uuid,
+            members: [user.username || user.uuid],
+            messages: [],
+            created: new Date().toISOString()
+        };
+        
+        // Store party in KV store
+        await puter.kv.set(`party_${partyId}`, partyData);
+        
+        showError(`Party created! Share code: ${partyId}`, "success");
+        document.getElementById("chatContainer").style.display = "block";
+        startPolling();
+    } catch (error) {
+        showError(`Failed to create party: ${error.message}`);
+    }
+});
+
+// Join party
+document.getElementById("joinPartyBtn").addEventListener("click", async () => {
+    try {
+        const code = prompt("Enter Party Code:");
+        if (!code) return;
+        
+        partyId = code.toUpperCase();
+        
+        // Get existing party data
+        const partyData = await puter.kv.get(`party_${partyId}`);
+        
+        if (!partyData) {
+            showError("Party not found! Please check the code.");
+            return;
+        }
+        
+        // Add user to party if not already a member
+        const currentUser = user.username || user.uuid;
+        if (!partyData.members.includes(currentUser)) {
+            partyData.members.push(currentUser);
+            
+            // Add join message
+            partyData.messages.push({
+                id: Date.now(),
+                user: 'System',
+                message: `${currentUser} joined the party`,
+                timestamp: new Date().toLocaleTimeString(),
+                type: 'system'
+            });
+            
+            // Update party data
+            await puter.kv.set(`party_${partyId}`, partyData);
+        }
+        
+        showError(`Joined party: ${partyId}`, "success");
+        document.getElementById("chatContainer").style.display = "block";
+        startPolling();
+    } catch (error) {
+        showError(`Failed to join party: ${error.message}`);
+    }
+});
+
+// Leave party
+document.getElementById("leavePartyBtn").addEventListener("click", async () => {
+    if (!partyId) return;
+    
+    try {
+        const partyData = await puter.kv.get(`party_${partyId}`);
+        
+        if (partyData) {
+            // Remove user from party members
+            const currentUser = user.username || user.uuid;
+            partyData.members = partyData.members.filter(member => member !== currentUser);
+            
+            // Add leave message
+            partyData.messages.push({
+                id: Date.now(),
+                user: 'System',
+                message: `${currentUser} left the party`,
+                timestamp: new Date().toLocaleTimeString(),
+                type: 'system'
+            });
+            
+            // Update or delete party
+            if (partyData.members.length === 0) {
+                await puter.kv.del(`party_${partyId}`);
+            } else {
+                // If host left, make first remaining member the new host
+                if (partyData.host === currentUser && partyData.members.length > 0) {
+                    partyData.host = partyData.members[0];
+                }
+                await puter.kv.set(`party_${partyId}`, partyData);
+            }
+        }
+        
+        clearInterval(pollInterval);
+        partyId = null;
+        document.getElementById("partyInfo").innerHTML = `<p>Left the party.</p>`;
+        document.getElementById("chatContainer").style.display = "none";
+        showError("Left the party", "success");
+    } catch (error) {
+        showError(`Failed to leave party: ${error.message}`);
+    }
+});
+
+// Polling party data every 2s for real-time updates
+function startPolling() {
+    if (!partyId) return;
+    if (pollInterval) clearInterval(pollInterval);
+    
+    // Update UI immediately
+    updateUI();
+    
+    pollInterval = setInterval(async () => {
+        await updateUI();
+    }, 2000);
+}
+
+// Update UI with latest party data
+async function updateUI() {
+    if (!partyId) return;
+    
+    try {
+        const partyData = await puter.kv.get(`party_${partyId}`);
+        
+        if (!partyData) {
+            showError("Party no longer exists!");
+            clearInterval(pollInterval);
+            partyId = null;
+            document.getElementById("chatContainer").style.display = "none";
+            return;
+        }
+        
+        // Update party info
+        document.getElementById("partyInfo").innerHTML = `
+            <h2>🎉 Party Code: <span class="party-code">${partyId}</span></h2>
+            <p><strong>Host:</strong> ${partyData.host} <span class="host-crown">👑</span></p>
+            <p><strong>Members (${partyData.members.length}):</strong></p>
+            <ul>${partyData.members.map(m => `<li>${m}${m === (user.username || user.uuid) ? ' (You)' : ''}${m === partyData.host ? ' 👑' : ''}</li>`).join("")}</ul>
+        `;
+        
+        // Update chat
+        updateChatUI(partyData.messages);
+    } catch (error) {
+        console.error("Error updating UI:", error);
+    }
+}
+
+// Chat functionality
+document.getElementById("sendBtn").addEventListener("click", sendMessage);
+document.getElementById("chatInput").addEventListener("keypress", (e) => {
+    if (e.key === "Enter") sendMessage();
+});
+
+async function sendMessage() {
+    const input = document.getElementById("chatInput");
+    const message = input.value.trim();
+    if (!message || !partyId) return;
+    
+    try {
+        const partyData = await puter.kv.get(`party_${partyId}`);
+        
+        if (!partyData) {
+            showError("Party no longer exists!");
+            return;
+        }
+        
+        const chatMessage = {
+            id: Date.now(),
+            user: user.username || user.uuid,
+            message: message,
+            timestamp: new Date().toLocaleTimeString(),
+            type: 'user'
+        };
+        
+        partyData.messages.push(chatMessage);
+        
+        // Keep only last 100 messages to prevent data getting too large
+        if (partyData.messages.length > 100) {
+            partyData.messages = partyData.messages.slice(-100);
+        }
+        
+        await puter.kv.set(`party_${partyId}`, partyData);
+        
+        input.value = "";
+        
+        // Update UI immediately to show the message
+        updateChatUI(partyData.messages);
+    } catch (error) {
+        showError(`Failed to send message: ${error.message}`);
+    }
+}
+
+function updateChatUI(messages) {
+    const chatContainer = document.getElementById("chatMessages");
+    chatContainer.innerHTML = messages.map(msg => {
+        const messageClass = msg.type === 'system' ? 'message system-message' : 'message';
+        const userDisplay = msg.type === 'system' ? '' : `<strong>${msg.user}:</strong> `;
+        const messageStyle = msg.type === 'system' ? 'style="font-style: italic; color: #888;"' : '';
+        
+        return `
+            <div class="${messageClass}" ${messageStyle}>
+                ${userDisplay}${msg.message}
+                <small style="float:right; color:#888;">${msg.timestamp}</small>
+            </div>
+        `;
+    }).join("");
+    chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function showError(message, type = "error") {
+    const errorDiv = document.getElementById("error");
+    const className = type === 'success' ? 'success' : 'error';
+    errorDiv.innerHTML = `<div class="${className}">${message}</div>`;
+    setTimeout(() => {
+        errorDiv.innerHTML = "";
+    }, 3000);
+}
+</script>
+
+</body>
+</html>
