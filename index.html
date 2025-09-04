@@ -493,46 +493,118 @@ document.getElementById("signIn").addEventListener("click", async () => {
     }
 });
 
+// Global variables for party state
+let isCreatingParty = false;
+let isInParty = false;
+
+// Debug mode: disable hosting for faster testing (set to true for debugging)
+const DEBUG_MODE = false;
+
 // Create party
 document.getElementById("createPartyBtn").addEventListener("click", async () => {
     try {
         // Check if user is authenticated
-        if (!user) {
+        if (!puter.auth.isSignedIn()) {
             showStatusMessage("Please sign in first!", "error");
             return;
         }
         
-        // Generate a random 6-character party ID with uppercase letters and numbers
-        let attempts = 0;
-        do {
-            partyId = generatePartyCode();
-            attempts++;
-            // Check if party code already exists
-            const existingParty = await puter.kv.get(`party_${partyId}`);
-            if (!existingParty) break;
-        } while (attempts < 10); // Try up to 10 times
-        
-        if (attempts >= 10) {
-            showStatusMessage("Failed to generate unique party code. Please try again.", "error");
+        // Get fresh user data
+        try {
+            user = await puter.auth.getUser();
+            console.log('Current user:', user);
+        } catch (e) {
+            showStatusMessage("Authentication error. Please sign in again.", "error");
             return;
         }
         
-        // Create party data structure
+        // Prevent multiple party creation attempts
+        if (isCreatingParty) {
+            showStatusMessage("Party creation already in progress...", "error");
+            return;
+        }
+        
+        if (isInParty) {
+            showStatusMessage("You're already in a party! Leave first to create a new one.", "error");
+            return;
+        }
+        
+        isCreatingParty = true;
+        console.log('Starting party creation...');
+        
+        // Test KV store functionality first
+        console.log('Testing KV store...');
+        const kvWorking = await testKVStore();
+        console.log('KV store working:', kvWorking);
+        
+        if (!kvWorking) {
+            showStatusMessage("KV store is not working. Please try again later.", "error");
+            isCreatingParty = false;
+            return;
+        }
+        
+        // For testing, use a deterministic party ID (uncomment for easier debugging)
+        // partyId = "TEST01";
+        
+        // Generate a random 6-character party ID with uppercase letters and numbers
+        let attempts = 0;
+        
+        // For initial testing, you can use a fixed party ID by uncommenting below:
+        // partyId = "DEBUG1";
+        // console.log(`Using debug party ID: ${partyId}`);
+        
+        if (!partyId) { // Only generate if not set for debugging
+            do {
+                partyId = generatePartyCode();
+                attempts++;
+                console.log(`Generated party ID: ${partyId}`);
+                
+                // Check if party code already exists using hybrid approach
+                const existingParty = await readPartyData(partyId);
+                if (!existingParty) {
+                    console.log(`Party ID ${partyId} is unique`);
+                    break;
+                }
+                console.log(`Party code ${partyId} already exists, generating new one...`);
+            } while (attempts < 10); // Try up to 10 times
+            
+            if (attempts >= 10) {
+                showStatusMessage("Failed to generate unique party code. Please try again.", "error");
+                isCreatingParty = false;
+                return;
+            }
+        }
+        
+        // Create party data structure with additional metadata
         const partyData = {
             id: partyId,
             host: user.username || user.uuid,
+            hostId: user.uuid, // Add UUID for better identification
             members: [user.username || user.uuid],
+            memberIds: [user.uuid], // Track UUIDs too
             messages: [],
-            created: new Date().toISOString()
+            created: new Date().toISOString(),
+            lastActivity: new Date().toISOString()
         };
         
-        // Store party in KV store
-        await puter.kv.set(`party_${partyId}`, partyData);
+        console.log('Party data created:', partyData);
         
-        console.log(`Party created with ID: ${partyId}`);
-        console.log('Party data stored:', partyData);
+        // Store party using hosting-based shared storage
+        console.log('Writing party data to storage...');
+        const success = await writePartyData(partyId, partyData);
+        console.log('Write party data result:', success);
         
-        showStatusMessage(`Party created! Share code: ${partyId}`, "success");
+        if (!success) {
+            showStatusMessage("Failed to create party. Please try again.", "error");
+            isCreatingParty = false;
+            return;
+        }
+        
+        // Mark as in party
+        isInParty = true;
+        isCreatingParty = false;
+        
+        showStatusMessage(`Party created! Share code: ${partyId}\n\nNote: It may take 30 seconds for cross-user access to be available.\nSame-user access is immediate.`, "success");
         document.getElementById("partyInfo").classList.add("visible");
         document.getElementById("chatContainer").classList.add("visible");
         
@@ -542,8 +614,25 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
         document.getElementById("joinPartyBtn").style.display = "none";
         
         startPolling();
+        
+        // Verify the party was stored correctly after a delay
+        setTimeout(async () => {
+            console.log('Verifying party creation...');
+            const verifyData = await readPartyData(partyId);
+            console.log('Party data stored:', partyData);
+            console.log('Verification read:', verifyData);
+            
+            if (!verifyData) {
+                showStatusMessage("Warning: Party verification failed. Party may not be accessible to other users yet.", "error");
+            } else {
+                console.log('Party verification successful!');
+            }
+        }, 3000); // Wait 3 seconds for hosting to propagate
+        
     } catch (error) {
+        console.error('Create party error:', error);
         showStatusMessage(`Failed to create party: ${error.message}`, "error");
+        isCreatingParty = false;
     }
 });
 
@@ -551,8 +640,22 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
 document.getElementById("joinPartyBtn").addEventListener("click", async () => {
     try {
         // Check if user is authenticated
-        if (!user) {
+        if (!puter.auth.isSignedIn()) {
             showStatusMessage("Please sign in first!", "error");
+            return;
+        }
+        
+        // Get fresh user data
+        try {
+            user = await puter.auth.getUser();
+            console.log('Current user for joining:', user);
+        } catch (e) {
+            showStatusMessage("Authentication error. Please sign in again.", "error");
+            return;
+        }
+        
+        if (isInParty) {
+            showStatusMessage("You're already in a party! Leave first to join another one.", "error");
             return;
         }
         
@@ -561,6 +664,7 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
         
         // Clean and validate the party code
         partyId = code.trim().toUpperCase();
+        console.log(`Attempting to join party: ${partyId}`);
         
         // Validate party code format (6 characters, letters and numbers only)
         if (!/^[A-Z0-9]{6}$/.test(partyId)) {
@@ -568,21 +672,62 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
             return;
         }
         
-        // Get existing party data
-        const partyData = await puter.kv.get(`party_${partyId}`);
+        // Get existing party data using hybrid approach
+        console.log('Trying multiple storage methods...');
         
-        console.log(`Attempting to join party: ${partyId}`);
+        const partyData = await readPartyData(partyId);
         console.log('Party data retrieved:', partyData);
         
+        // Provide detailed feedback about which method worked/failed
         if (!partyData) {
-            showStatusMessage(`Party "${partyId}" not found! Please check the code and try again.`, "error");
+            console.log('Attempting additional diagnostics...');
+            
+            // Test hosting endpoint specifically
+            try {
+                const subdomain = `party-data-${partyId.toLowerCase()}`;
+                const testUrl = `https://${subdomain}.puter.site/data.json`;
+                console.log(`Testing hosting endpoint: ${testUrl}`);
+                const testResponse = await fetch(testUrl);
+                console.log(`Hosting endpoint ${testUrl}: ${testResponse.status} ${testResponse.statusText}`);
+                
+                if (testResponse.ok) {
+                    const testData = await testResponse.json();
+                    console.log('Hosting data found but readPartyData failed:', testData);
+                }
+            } catch (e) {
+                console.log('Hosting endpoint test failed:', e.message);
+            }
+            
+            // Test direct file access
+            try {
+                await puter.fs.stat(`party_${partyId}.json`);
+                console.log('Direct file exists but read failed');
+            } catch (e) {
+                console.log('Direct file does not exist:', e.message);
+            }
+            
+            // Test KV store
+            try {
+                const kvResult = await puter.kv.get(`party_${partyId}`);
+                console.log('KV store result:', kvResult ? 'exists' : 'not found');
+            } catch (e) {
+                console.log('KV store access failed:', e.message);
+            }
+        }
+        
+        if (!partyData) {
+            showStatusMessage(`Party "${partyId}" not found!\n\nPossible reasons:\n1. Incorrect party code\n2. Party hasn't finished creating (wait 30 seconds)\n3. Cross-user access limitations\n\nTry again in a moment if the party was just created.`, "error");
             return;
         }
         
         // Add user to party if not already a member
         const currentUser = user.username || user.uuid;
+        const currentUserId = user.uuid;
+        
         if (!partyData.members.includes(currentUser)) {
             partyData.members.push(currentUser);
+            partyData.memberIds.push(currentUserId);
+            partyData.lastActivity = new Date().toISOString();
             
             // Add join message
             partyData.messages.push({
@@ -594,8 +739,13 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
             });
             
             // Update party data
-            await puter.kv.set(`party_${partyId}`, partyData);
+            console.log('Updating party data with new member...');
+            const updateSuccess = await writePartyData(partyId, partyData);
+            console.log('Party update result:', updateSuccess);
         }
+        
+        // Mark as in party
+        isInParty = true;
         
         showStatusMessage(`Joined party: ${partyId}`, "success");
         document.getElementById("partyInfo").classList.add("visible");
@@ -608,6 +758,7 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
         
         startPolling();
     } catch (error) {
+        console.error('Join party error:', error);
         showStatusMessage(`Failed to join party: ${error.message}`, "error");
     }
 });
@@ -617,7 +768,8 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
     if (!partyId) return;
     
     try {
-        const partyData = await puter.kv.get(`party_${partyId}`);
+        console.log('Leaving party:', partyId);
+        const partyData = await readPartyData(partyId);
         
         if (partyData) {
             // Remove user from party members
@@ -635,20 +787,32 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
             
             // Update or delete party
             if (partyData.members.length === 0) {
-                await puter.kv.del(`party_${partyId}`);
+                console.log('Party is empty, deleting...');
+                await deletePartyData(partyId);
             } else {
                 // If host left, make first remaining member the new host
                 if (partyData.host === currentUser && partyData.members.length > 0) {
                     partyData.host = partyData.members[0];
+                    console.log(`New host assigned: ${partyData.host}`);
                 }
-                await puter.kv.set(`party_${partyId}`, partyData);
+                partyData.lastActivity = new Date().toISOString();
+                await writePartyData(partyId, partyData);
             }
         }
         
+        // Reset local state
         clearInterval(pollInterval);
         partyId = null;
+        isInParty = false;
+        
         document.getElementById("partyInfo").classList.remove("visible");
         document.getElementById("chatContainer").classList.remove("visible");
+        
+        // Exit fullscreen if active
+        const chatContainer = document.getElementById("chatContainer");
+        if (chatContainer.classList.contains("fullscreen-mode")) {
+            toggleFullscreen();
+        }
         
         // Show create/join buttons and hide leave button
         document.getElementById("leavePartyBtn").style.display = "none";
@@ -656,7 +820,9 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
         document.getElementById("joinPartyBtn").style.display = "flex";
         
         showStatusMessage("Left the party", "success");
+        console.log('Successfully left party');
     } catch (error) {
+        console.error('Leave party error:', error);
         showStatusMessage(`Failed to leave party: ${error.message}`, "error");
     }
 });
@@ -666,10 +832,13 @@ function startPolling() {
     if (!partyId) return;
     if (pollInterval) clearInterval(pollInterval);
     
+    console.log('Starting polling for party:', partyId);
+    
     // Update UI immediately
     updateUI();
     
     pollInterval = setInterval(async () => {
+        console.log('Polling update...');
         await updateUI();
     }, 2000);
 }
@@ -679,14 +848,25 @@ async function updateUI() {
     if (!partyId || !user) return;
     
     try {
-        const partyData = await puter.kv.get(`party_${partyId}`);
+        console.log('Updating UI for party:', partyId);
+        const partyData = await readPartyData(partyId);
+        console.log('UI update - party data:', partyData);
         
         if (!partyData) {
+            console.log('Party no longer exists, cleaning up UI');
             showStatusMessage("Party no longer exists!", "error");
             clearInterval(pollInterval);
             partyId = null;
+            isInParty = false;
+            
             document.getElementById("partyInfo").classList.remove("visible");
             document.getElementById("chatContainer").classList.remove("visible");
+            
+            // Exit fullscreen if active
+            const chatContainer = document.getElementById("chatContainer");
+            if (chatContainer.classList.contains("fullscreen-mode")) {
+                toggleFullscreen();
+            }
             
             // Show create/join buttons and hide leave button
             document.getElementById("leavePartyBtn").style.display = "none";
@@ -718,12 +898,14 @@ async function updateUI() {
         
         // Update chat
         updateChatUI(partyData.messages);
+        console.log('UI update completed successfully');
     } catch (error) {
         console.error("Error updating UI:", error);
         if (error.message.includes('authentication') || error.message.includes('unauthorized')) {
             showStatusMessage("Session expired. Please sign in again.", "error");
             // Reset to sign-in state
             user = null;
+            isInParty = false;
             clearInterval(pollInterval);
             partyId = null;
             document.getElementById("authSection").style.display = "block";
@@ -813,7 +995,7 @@ async function sendMessage() {
     if (!message || !partyId) return;
     
     // Check if user is authenticated
-    if (!user) {
+    if (!puter.auth.isSignedIn() || !user) {
         showStatusMessage("Please sign in first!", "error");
         return;
     }
@@ -827,7 +1009,8 @@ async function sendMessage() {
     lastMessageTime = now;
     
     try {
-        const partyData = await puter.kv.get(`party_${partyId}`);
+        console.log('Sending message:', message);
+        const partyData = await readPartyData(partyId);
         
         if (!partyData) {
             showStatusMessage("Party no longer exists!", "error");
@@ -849,13 +1032,24 @@ async function sendMessage() {
             partyData.messages = partyData.messages.slice(-100);
         }
         
-        await puter.kv.set(`party_${partyId}`, partyData);
+        partyData.lastActivity = new Date().toISOString();
+        
+        console.log('Updating party data with new message...');
+        const success = await writePartyData(partyId, partyData);
+        console.log('Message write result:', success);
+        
+        if (!success) {
+            showStatusMessage("Failed to send message. Please try again.", "error");
+            return;
+        }
         
         input.value = "";
         
         // Update UI immediately to show the message
         updateChatUI(partyData.messages);
+        console.log('Message sent successfully');
     } catch (error) {
+        console.error('Send message error:', error);
         showStatusMessage(`Failed to send message: ${error.message}`, "error");
     }
 }
@@ -886,6 +1080,184 @@ function updateChatUI(messages) {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+// Helper functions for party data management using hybrid approach
+async function readPartyData(partyId) {
+    console.log(`Reading party data for ${partyId}`);
+    try {
+        // First, try the hosting endpoint approach (skip in debug mode)
+        if (!DEBUG_MODE) {
+            try {
+                const response = await fetch(`https://party-data-${partyId.toLowerCase()}.puter.site/data.json`);
+                if (response.ok) {
+                    const partyData = await response.json();
+                    console.log(`Found party ${partyId} via hosting`);
+                    return partyData;
+                }
+            } catch (e) {
+                console.log(`Hosting endpoint failed: ${e.message}`);
+            }
+        } else {
+            console.log('DEBUG_MODE: Skipping hosting endpoint check');
+        }
+        
+        // Fallback: Try direct file access (may work for same user)
+        try {
+            const fileBlob = await puter.fs.read(`party_${partyId}.json`);
+            const fileContent = await fileBlob.text();
+            console.log(`Found party ${partyId} via direct file access`);
+            return JSON.parse(fileContent);
+        } catch (e) {
+            console.log(`Direct file access failed: ${e.message}`);
+        }
+        
+        // Last resort: Try KV store (same user only)
+        try {
+            const kvData = await puter.kv.get(`party_${partyId}`);
+            if (kvData) {
+                console.log(`Found party ${partyId} via KV store`);
+                return kvData;
+            }
+        } catch (e) {
+            console.log(`KV store access failed: ${e.message}`);
+        }
+        
+        console.log(`Party ${partyId} not found in any storage method`);
+        return null;
+    } catch (error) {
+        console.error(`Error reading party ${partyId}:`, error);
+        return null;
+    }
+}
+
+async function writePartyData(partyId, partyData) {
+    let success = false;
+    const errors = [];
+    
+    console.log(`Writing party data for ${partyId}:`, partyData);
+    
+    // Method 1: Try hosting approach (for cross-user access) - Skip in debug mode
+    if (!DEBUG_MODE) {
+        try {
+            const htmlContent = `<!DOCTYPE html>
+<html>
+<head>
+    <title>Party Data ${partyId}</title>
+    <meta charset="UTF-8">
+    <script>
+        // Serve JSON data
+        if (window.location.pathname.includes('data.json')) {
+            document.write('${JSON.stringify(partyData).replace(/'/g, "\\'").replace(/"/g, '\\"')}');
+        } else {
+            document.write('<h1>Party ${partyId}</h1><p>Active party data endpoint.</p>');
+        }
+    <\/script>
+</head>
+<body></body>
+</html>`;
+            
+            const hostingDir = `party-hosting-${partyId}`;
+            await puter.fs.mkdir(hostingDir, { createMissingParents: true });
+            await puter.fs.write(`${hostingDir}/index.html`, htmlContent, { overwrite: true });
+            await puter.fs.write(`${hostingDir}/data.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
+            
+            const subdomain = `party-data-${partyId.toLowerCase()}`;
+            try {
+                await puter.hosting.create(subdomain, hostingDir);
+                console.log(`Party ${partyId} hosted at: https://${subdomain}.puter.site`);
+                success = true;
+            } catch (e) {
+                if (e.message.includes('already exists')) {
+                    await puter.hosting.update(subdomain, hostingDir);
+                    console.log(`Party ${partyId} updated at: https://${subdomain}.puter.site`);
+                    success = true;
+                } else {
+                    errors.push(`Hosting error: ${e.message}`);
+                    console.error(`Hosting error for party ${partyId}:`, e);
+                }
+            }
+        } catch (error) {
+            errors.push(`Hosting setup error: ${error.message}`);
+            console.error(`Hosting setup error for party ${partyId}:`, error);
+        }
+    } else {
+        console.log('DEBUG_MODE: Skipping hosting storage');
+    }
+    
+    // Method 2: Direct file storage (fallback)
+    try {
+        await puter.fs.write(`party_${partyId}.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
+        console.log(`Party ${partyId} stored as direct file`);
+        success = true;
+    } catch (error) {
+        errors.push(`File storage error: ${error.message}`);
+        console.error(`File storage error for party ${partyId}:`, error);
+    }
+    
+    // Method 3: KV store (backup)
+    try {
+        await puter.kv.set(`party_${partyId}`, partyData);
+        console.log(`Party ${partyId} stored in KV store`);
+        success = true;
+    } catch (error) {
+        errors.push(`KV store error: ${error.message}`);
+        console.error(`KV store error for party ${partyId}:`, error);
+    }
+    
+    if (!success) {
+        console.error(`All storage methods failed for party ${partyId}:`, errors);
+    } else {
+        console.log(`Party ${partyId} stored successfully via at least one method`);
+    }
+    
+    return success;
+}
+
+async function deletePartyData(partyId) {
+    const results = [];
+    console.log(`Deleting party data for ${partyId}`);
+    
+    // Try to delete from hosting (skip in debug mode)
+    if (!DEBUG_MODE) {
+        try {
+            const subdomain = `party-data-${partyId.toLowerCase()}`;
+            await puter.hosting.delete(subdomain);
+            results.push(`Deleted hosting: ${subdomain}`);
+        } catch (e) {
+            results.push(`Hosting deletion failed: ${e.message}`);
+        }
+        
+        // Try to delete hosting directory
+        try {
+            const hostingDir = `party-hosting-${partyId}`;
+            await puter.fs.delete(hostingDir, { recursive: true });
+            results.push(`Deleted directory: ${hostingDir}`);
+        } catch (e) {
+            results.push(`Directory deletion failed: ${e.message}`);
+        }
+    } else {
+        results.push('DEBUG_MODE: Skipped hosting cleanup');
+    }
+    
+    // Try to delete direct file
+    try {
+        await puter.fs.delete(`party_${partyId}.json`);
+        results.push(`Deleted file: party_${partyId}.json`);
+    } catch (e) {
+        results.push(`File deletion failed: ${e.message}`);
+    }
+    
+    // Try to delete from KV store
+    try {
+        await puter.kv.del(`party_${partyId}`);
+        results.push(`Deleted from KV store: party_${partyId}`);
+    } catch (e) {
+        results.push(`KV deletion failed: ${e.message}`);
+    }
+    
+    console.log(`Party ${partyId} deletion results:`, results);
+    return true;
+}
+
 // Generate a proper 6-character party code with uppercase letters and numbers
 function generatePartyCode() {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
@@ -894,6 +1266,32 @@ function generatePartyCode() {
         result += chars.charAt(Math.floor(Math.random() * chars.length));
     }
     return result;
+}
+
+// Test KV store functionality
+async function testKVStore() {
+    try {
+        console.log('Testing KV store...');
+        const testKey = 'test_key_123';
+        const testValue = { test: 'data', timestamp: Date.now() };
+        
+        // Store test data
+        await puter.kv.set(testKey, testValue);
+        console.log('Test data stored');
+        
+        // Retrieve test data
+        const retrieved = await puter.kv.get(testKey);
+        console.log('Test data retrieved:', retrieved);
+        
+        // Clean up
+        await puter.kv.del(testKey);
+        console.log('Test cleanup complete');
+        
+        return true;
+    } catch (error) {
+        console.error('KV store test failed:', error);
+        return false;
+    }
 }
 
 // Sanitize HTML to prevent XSS attacks
