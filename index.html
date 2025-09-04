@@ -428,6 +428,11 @@ html, body {
       <i class="fas fa-sign-out-alt icon"></i>
       Leave Party
     </button>
+    <!-- Debug button for testing -->
+    <button class="action-btn" id="debugBtn" style="display: none; background: linear-gradient(145deg, #444, #333);">
+      <i class="fas fa-bug icon"></i>
+      Debug Info
+    </button>
   </div>
 
   <div id="statusMessages"></div>
@@ -438,7 +443,7 @@ html, body {
 
   <div class="chat-container" id="chatContainer">
     <div class="chat-header">
-      <h3><i class="fas fa-comments"></i> Party Chat</h3>
+      <h3><i class="fas fa-comments"></i> Cross-User Party Chat</h3>
       <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">
         <i class="fas fa-expand" id="fullscreenIcon"></i>
       </button>
@@ -459,6 +464,7 @@ html, body {
 // Using Puter.js KV store for persistent party system
 let user, partyId, pollInterval;
 let lastMessageTime = 0;
+let messageSequence = 0; // Track message sequence for debugging
 const MESSAGE_COOLDOWN = 1000; // 1 second cooldown between messages
 
 // Initialize app on page load
@@ -498,7 +504,7 @@ let isCreatingParty = false;
 let isInParty = false;
 
 // Debug mode: disable hosting for faster testing (set to true for debugging)
-const DEBUG_MODE = false;
+const DEBUG_MODE = false; // DISABLED - Focus on cross-user functionality only
 
 // Create party
 document.getElementById("createPartyBtn").addEventListener("click", async () => {
@@ -603,8 +609,9 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
         // Mark as in party
         isInParty = true;
         isCreatingParty = false;
+        window.joinTime = Date.now(); // Track when we joined for grace period
         
-        showStatusMessage(`Party created! Share code: ${partyId}\n\nNote: It may take 30 seconds for cross-user access to be available.\nSame-user access is immediate.`, "success");
+        showStatusMessage(`🎉 Cross-User Party Created!\n\nParty Code: ${partyId}\n\n🌐 CROSS-USER ACCESS:\nOther users can join from different devices/accounts!\n\n⏰ Please wait 30-60 seconds for global availability.\nShare the code with friends to join from their accounts.`, "success");
         document.getElementById("partyInfo").classList.add("visible");
         document.getElementById("chatContainer").classList.add("visible");
         
@@ -628,6 +635,12 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
                 console.log('Party verification successful!');
             }
         }, 3000); // Wait 3 seconds for hosting to propagate
+        
+        // Show leave button and hide create/join buttons
+        document.getElementById("leavePartyBtn").style.display = "flex";
+        document.getElementById("createPartyBtn").style.display = "none";
+        document.getElementById("joinPartyBtn").style.display = "none";
+        document.getElementById("debugBtn").style.display = "flex"; // Show debug button
         
     } catch (error) {
         console.error('Create party error:', error);
@@ -716,7 +729,7 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
         }
         
         if (!partyData) {
-            showStatusMessage(`Party "${partyId}" not found!\n\nPossible reasons:\n1. Incorrect party code\n2. Party hasn't finished creating (wait 30 seconds)\n3. Cross-user access limitations\n\nTry again in a moment if the party was just created.`, "error");
+            showStatusMessage(`❌ Party "${partyId}" not found!\n\n🔍 CROSS-USER TROUBLESHOOTING:\n1. Verify the party code is correct\n2. Wait 60 seconds if party was just created\n3. Ask party host to confirm the code\n4. Check if party still exists\n\n🌐 Cross-user access may take time to propagate.`, "error");
             return;
         }
         
@@ -724,7 +737,11 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
         const currentUser = user.username || user.uuid;
         const currentUserId = user.uuid;
         
+        console.log('Checking membership for:', currentUser);
+        console.log('Current party members:', partyData.members);
+        
         if (!partyData.members.includes(currentUser)) {
+            console.log(`➕ Adding ${currentUser} to party members`);
             partyData.members.push(currentUser);
             partyData.memberIds.push(currentUserId);
             partyData.lastActivity = new Date().toISOString();
@@ -738,14 +755,52 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
                 type: 'system'
             });
             
-            // Update party data
+            console.log('Updated party members:', partyData.members);
+            
+            // Update party data with retries for cross-user reliability
             console.log('Updating party data with new member...');
-            const updateSuccess = await writePartyData(partyId, partyData);
+            let updateSuccess = false;
+            let attempts = 0;
+            const maxAttempts = 3;
+            
+            while (!updateSuccess && attempts < maxAttempts) {
+                attempts++;
+                console.log(`Update attempt ${attempts}/${maxAttempts}...`);
+                updateSuccess = await writePartyData(partyId, partyData);
+                
+                if (!updateSuccess && attempts < maxAttempts) {
+                    console.log(`Update attempt ${attempts} failed, retrying in 1 second...`);
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    // Re-read latest data before retrying
+                    const latestData = await readPartyData(partyId);
+                    if (latestData && !latestData.members.includes(currentUser)) {
+                        latestData.members.push(currentUser);
+                        latestData.memberIds.push(currentUserId);
+                        latestData.messages.push({
+                            id: Date.now(),
+                            user: 'System',
+                            message: `${currentUser} joined the party`,
+                            timestamp: new Date().toLocaleTimeString(),
+                            type: 'system'
+                        });
+                        partyData = latestData;
+                    }
+                }
+            }
+            
             console.log('Party update result:', updateSuccess);
+            
+            if (!updateSuccess) {
+                showStatusMessage("Failed to join party properly. Please try again.", "error");
+                return;
+            }
+        } else {
+            console.log(`✅ ${currentUser} already a member of the party`);
         }
         
-        // Mark as in party
+        // Mark as in party and set join time for grace period
         isInParty = true;
+        window.joinTime = Date.now(); // Track when we joined for grace period
         
         showStatusMessage(`Joined party: ${partyId}`, "success");
         document.getElementById("partyInfo").classList.add("visible");
@@ -757,6 +812,18 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
         document.getElementById("joinPartyBtn").style.display = "none";
         
         startPolling();
+        
+        // Show leave button and hide create/join buttons
+        document.getElementById("leavePartyBtn").style.display = "flex";
+        document.getElementById("createPartyBtn").style.display = "none";
+        document.getElementById("joinPartyBtn").style.display = "none";
+        document.getElementById("debugBtn").style.display = "flex"; // Show debug button
+        
+        // Start polling with delay to allow cross-user write to propagate
+        setTimeout(() => {
+            startPolling();
+        }, 3000); // 3 second delay for cross-user hosting propagation
+        
     } catch (error) {
         console.error('Join party error:', error);
         showStatusMessage(`Failed to join party: ${error.message}`, "error");
@@ -804,6 +871,7 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
         clearInterval(pollInterval);
         partyId = null;
         isInParty = false;
+        window.joinTime = null; // Reset join time
         
         document.getElementById("partyInfo").classList.remove("visible");
         document.getElementById("chatContainer").classList.remove("visible");
@@ -818,6 +886,7 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
         document.getElementById("leavePartyBtn").style.display = "none";
         document.getElementById("createPartyBtn").style.display = "flex";
         document.getElementById("joinPartyBtn").style.display = "flex";
+        document.getElementById("debugBtn").style.display = "none"; // Hide debug button
         
         showStatusMessage("Left the party", "success");
         console.log('Successfully left party');
@@ -827,20 +896,21 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
     }
 });
 
-// Polling party data every 2s for real-time updates
+// Polling party data every 3s for cross-user updates (balanced for hosting propagation)
 function startPolling() {
     if (!partyId) return;
     if (pollInterval) clearInterval(pollInterval);
     
-    console.log('Starting polling for party:', partyId);
+    console.log(`🌐 [${user?.username || user?.uuid || 'Unknown'}] Starting cross-user polling for party:`, partyId);
     
     // Update UI immediately
     updateUI();
     
+    // Poll every 3 seconds for cross-user sync (balanced for hosting propagation)
     pollInterval = setInterval(async () => {
-        console.log('Polling update...');
+        console.log(`🔄 [${user?.username || user?.uuid || 'Unknown'}] Cross-user polling update...`);
         await updateUI();
-    }, 2000);
+    }, 3000); // 3 seconds - optimized for cross-user hosting propagation
 }
 
 // Update UI with latest party data
@@ -848,12 +918,12 @@ async function updateUI() {
     if (!partyId || !user) return;
     
     try {
-        console.log('Updating UI for party:', partyId);
+        console.log(`[${user.username || user.uuid}] Updating UI for party:`, partyId);
         const partyData = await readPartyData(partyId);
-        console.log('UI update - party data:', partyData);
+        console.log(`[${user.username || user.uuid}] UI update - party data:`, partyData);
         
         if (!partyData) {
-            console.log('Party no longer exists, cleaning up UI');
+            console.log(`[${user.username || user.uuid}] Party no longer exists, cleaning up UI`);
             showStatusMessage("Party no longer exists!", "error");
             clearInterval(pollInterval);
             partyId = null;
@@ -872,8 +942,51 @@ async function updateUI() {
             document.getElementById("leavePartyBtn").style.display = "none";
             document.getElementById("createPartyBtn").style.display = "flex";
             document.getElementById("joinPartyBtn").style.display = "flex";
+            document.getElementById("debugBtn").style.display = "none";
             
             return;
+        }
+        
+        // Verify user is still a member (with extended grace period for cross-user sync)
+        const currentUser = user.username || user.uuid;
+        if (!partyData.members.includes(currentUser)) {
+            // Extended grace period for cross-user hosting propagation
+            console.log(`⚠️ [${currentUser}] User not found in member list`);
+            console.log('Current members:', partyData.members);
+            console.log('Looking for user:', currentUser);
+            console.log('Join time:', window.joinTime, 'Current time:', Date.now());
+            
+            // Extended grace period: 30 seconds for cross-user hosting propagation
+            const timeSinceJoin = Date.now() - (window.joinTime || 0);
+            const graceperiod = 30000; // 30 seconds for cross-user sync
+            
+            if (timeSinceJoin > graceperiod && window.joinTime) {
+                console.log(`❌ [${currentUser}] User confirmed not a member after ${graceperiod/1000}s grace period`);
+                showStatusMessage("You have been removed from the party!", "error");
+                clearInterval(pollInterval);
+                partyId = null;
+                isInParty = false;
+                window.joinTime = null;
+                
+                document.getElementById("partyInfo").classList.remove("visible");
+                document.getElementById("chatContainer").classList.remove("visible");
+                document.getElementById("leavePartyBtn").style.display = "none";
+                document.getElementById("createPartyBtn").style.display = "flex";
+                document.getElementById("joinPartyBtn").style.display = "flex";
+                document.getElementById("debugBtn").style.display = "none";
+                
+                return;
+            } else {
+                console.log(`⏳ [${currentUser}] Grace period active (${Math.round((graceperiod - timeSinceJoin)/1000)}s remaining), waiting for cross-user sync...`);
+                // Continue with UI update even if not in member list yet
+            }
+        } else {
+            console.log(`✅ [${currentUser}] User confirmed as party member`);
+            // Reset join time once we're confirmed as a member
+            if (window.joinTime) {
+                console.log(`🎉 [${currentUser}] Membership confirmed after ${Math.round((Date.now() - window.joinTime)/1000)}s`);
+                window.joinTime = null;
+            }
         }
         
         // Update party info
@@ -896,11 +1009,12 @@ async function updateUI() {
             </div>
         `;
         
-        // Update chat
+        // Update chat with message count logging
+        console.log(`[${user.username || user.uuid}] Updating chat UI with ${partyData.messages.length} messages`);
         updateChatUI(partyData.messages);
-        console.log('UI update completed successfully');
+        console.log(`[${user.username || user.uuid}] UI update completed successfully`);
     } catch (error) {
-        console.error("Error updating UI:", error);
+        console.error(`[${user.username || user.uuid}] Error updating UI:`, error);
         if (error.message.includes('authentication') || error.message.includes('unauthorized')) {
             showStatusMessage("Session expired. Please sign in again.", "error");
             // Reset to sign-in state
@@ -915,6 +1029,74 @@ async function updateUI() {
         }
     }
 }
+
+// Debug functionality - Cross-user diagnostics
+document.getElementById("debugBtn").addEventListener("click", async () => {
+    if (!partyId) {
+        alert("No party active!");
+        return;
+    }
+    
+    try {
+        console.log('=== CROSS-USER DEBUG INFO START ===');
+        console.log('Current User:', user);
+        console.log('Party ID:', partyId);
+        console.log('Is In Party:', isInParty);
+        
+        const partyData = await readPartyData(partyId);
+        console.log('Current Party Data:', partyData);
+        
+        if (partyData) {
+            console.log('Total Messages:', partyData.messages.length);
+            console.log('Recent Messages:');
+            partyData.messages.slice(-5).forEach((msg, i) => {
+                console.log(`  ${i + 1}. [${msg.user}] ${msg.message} (${msg.timestamp})`);
+            });
+        }
+        
+        // Test cross-user storage methods
+        console.log('Testing CROSS-USER storage methods...');
+        
+        // Test Hosting (PRIMARY for cross-user)
+        try {
+            const response = await fetch(`https://party-data-${partyId.toLowerCase()}.puter.site/data.json`);
+            if (response.ok) {
+                const hostData = await response.json();
+                console.log('✅ HOSTING (Cross-user): WORKING -', hostData ? `${hostData.messages?.length || 0} messages` : 'No data');
+            } else {
+                console.log(`❌ HOSTING (Cross-user): FAILED - ${response.status} ${response.statusText}`);
+            }
+        } catch (e) {
+            console.log('❌ HOSTING (Cross-user): FAILED -', e.message);
+        }
+        
+        // Test File (Backup)
+        try {
+            const fileBlob = await puter.fs.read(`party_${partyId}.json`);
+            const fileData = JSON.parse(await fileBlob.text());
+            console.log('⚠️ FILE (Backup): Working -', fileData ? `${fileData.messages?.length || 0} messages` : 'No data');
+        } catch (e) {
+            console.log('❌ FILE (Backup): Failed -', e.message);
+        }
+        
+        // Test KV (Backup)
+        try {
+            const kvData = await puter.kv.get(`party_${partyId}`);
+            console.log('⚠️ KV (Backup): Working -', kvData ? `${kvData.messages?.length || 0} messages` : 'No data');
+        } catch (e) {
+            console.log('❌ KV (Backup): Failed -', e.message);
+        }
+        
+        console.log('=== CROSS-USER DEBUG INFO END ===');
+        
+        const summary = `🌐 Cross-User Debug Info (check console):\n\nParty: ${partyId}\nUser: ${user?.username || user?.uuid}\nMessages: ${partyData?.messages?.length || 0}\nMembers: ${partyData?.members?.length || 0}\n\n🔗 Hosting URL:\nhttps://party-data-${partyId.toLowerCase()}.puter.site/data.json`;
+        alert(summary);
+        
+    } catch (error) {
+        console.error('Cross-user debug error:', error);
+        alert(`Debug failed: ${error.message}`);
+    }
+});
 
 // Chat functionality
 document.getElementById("sendBtn").addEventListener("click", sendMessage);
@@ -1009,22 +1191,46 @@ async function sendMessage() {
     lastMessageTime = now;
     
     try {
-        console.log('Sending message:', message);
+        console.log(`[${user.username || user.uuid}] Sending message:`, message);
+        
+        // Always get the LATEST party data before adding message
+        console.log('Getting latest party data before sending message...');
         const partyData = await readPartyData(partyId);
+        console.log('Latest party data retrieved:', partyData);
         
         if (!partyData) {
             showStatusMessage("Party no longer exists!", "error");
             return;
         }
         
+        // Verify user is still a member (with grace period)
+        const currentUser = user.username || user.uuid;
+        if (!partyData.members.includes(currentUser)) {
+            // If we're within grace period, try to re-add ourselves
+            const timeSinceJoin = Date.now() - (window.joinTime || 0);
+            if (timeSinceJoin < 30000 && window.joinTime) {
+                console.log(`⚠️ User not in member list, re-adding during grace period...`);
+                partyData.members.push(currentUser);
+                partyData.memberIds = partyData.memberIds || [];
+                partyData.memberIds.push(user.uuid);
+            } else {
+                showStatusMessage("You are no longer a member of this party!", "error");
+                return;
+            }
+        }
+        
         const chatMessage = {
-            id: Date.now(),
+            id: Date.now() + Math.random(), // Ensure unique ID
+            sequence: ++messageSequence, // Add sequence number for debugging
             user: user.username || user.uuid,
+            userId: user.uuid, // Add userId for better tracking
             message: sanitizeHTML(message),
             timestamp: new Date().toLocaleTimeString(),
+            fullTimestamp: new Date().toISOString(), // Add full timestamp for precise ordering
             type: 'user'
         };
         
+        console.log('Adding message to party data:', chatMessage);
         partyData.messages.push(chatMessage);
         
         // Keep only last 100 messages to prevent data getting too large
@@ -1034,7 +1240,7 @@ async function sendMessage() {
         
         partyData.lastActivity = new Date().toISOString();
         
-        console.log('Updating party data with new message...');
+        console.log('Writing updated party data with new message...');
         const success = await writePartyData(partyId, partyData);
         console.log('Message write result:', success);
         
@@ -1047,17 +1253,34 @@ async function sendMessage() {
         
         // Update UI immediately to show the message
         updateChatUI(partyData.messages);
-        console.log('Message sent successfully');
+        console.log(`[${user.username || user.uuid}] Message sent successfully`);
+        
+        // Force an immediate poll update to sync across all users faster
+        setTimeout(async () => {
+            console.log('Triggering immediate poll update after message send...');
+            await updateUI();
+        }, 500);
+        
     } catch (error) {
-        console.error('Send message error:', error);
+        console.error(`[${user.username || user.uuid}] Send message error:`, error);
         showStatusMessage(`Failed to send message: ${error.message}`, "error");
     }
 }
 
 function updateChatUI(messages) {
     const chatContainer = document.getElementById("chatMessages");
+    const currentUser = user?.username || user?.uuid;
+    
+    console.log(`[${currentUser}] Updating chat UI with ${messages.length} messages`);
+    
+    // Log all messages for debugging
+    messages.forEach((msg, index) => {
+        console.log(`[${currentUser}] Message ${index + 1}: [${msg.user}] ${msg.message}`);
+    });
+    
     chatContainer.innerHTML = messages.map(msg => {
         const isSystemMessage = msg.type === 'system';
+        const isCurrentUser = msg.user === currentUser;
         const messageClass = isSystemMessage ? 'message system-message' : 'message';
         
         if (isSystemMessage) {
@@ -1069,59 +1292,63 @@ function updateChatUI(messages) {
             `;
         } else {
             return `
-                <div class="${messageClass}">
-                    <div class="username">${msg.user}</div>
+                <div class="${messageClass}" style="${isCurrentUser ? 'opacity: 1; border-left: 3px solid #ff6b39;' : ''}">
+                    <div class="username" style="${isCurrentUser ? 'color: #ff8c5a; font-weight: bold;' : ''}">
+                        ${msg.user} ${isCurrentUser ? '(You)' : ''}
+                    </div>
                     <div>${msg.message}</div>
                     <span class="timestamp">${msg.timestamp}</span>
                 </div>
             `;
         }
     }).join("");
+    
+    // Auto-scroll to bottom
     chatContainer.scrollTop = chatContainer.scrollHeight;
+    
+    console.log(`[${currentUser}] Chat UI updated, scrolled to bottom`);
 }
 
-// Helper functions for party data management using hybrid approach
+// Helper functions for party data management - CROSS-USER FOCUSED
 async function readPartyData(partyId) {
-    console.log(`Reading party data for ${partyId}`);
+    console.log(`Reading party data for ${partyId} (Cross-user mode)`);
     try {
-        // First, try the hosting endpoint approach (skip in debug mode)
-        if (!DEBUG_MODE) {
-            try {
-                const response = await fetch(`https://party-data-${partyId.toLowerCase()}.puter.site/data.json`);
-                if (response.ok) {
-                    const partyData = await response.json();
-                    console.log(`Found party ${partyId} via hosting`);
-                    return partyData;
-                }
-            } catch (e) {
-                console.log(`Hosting endpoint failed: ${e.message}`);
+        // PRIMARY: Hosting endpoint for cross-user access
+        try {
+            const response = await fetch(`https://party-data-${partyId.toLowerCase()}.puter.site/data.json`);
+            if (response.ok) {
+                const partyData = await response.json();
+                console.log(`✅ Found party ${partyId} via HOSTING (cross-user)`);
+                return partyData;
+            } else {
+                console.log(`❌ Hosting endpoint returned ${response.status}: ${response.statusText}`);
             }
-        } else {
-            console.log('DEBUG_MODE: Skipping hosting endpoint check');
+        } catch (e) {
+            console.log(`❌ Hosting endpoint failed: ${e.message}`);
         }
         
-        // Fallback: Try direct file access (may work for same user)
+        // FALLBACK: Direct file access (backup for same user)
         try {
             const fileBlob = await puter.fs.read(`party_${partyId}.json`);
             const fileContent = await fileBlob.text();
-            console.log(`Found party ${partyId} via direct file access`);
+            console.log(`⚠️ Found party ${partyId} via direct file (fallback)`);
             return JSON.parse(fileContent);
         } catch (e) {
-            console.log(`Direct file access failed: ${e.message}`);
+            console.log(`❌ Direct file access failed: ${e.message}`);
         }
         
-        // Last resort: Try KV store (same user only)
+        // LAST RESORT: KV store (same user only)
         try {
             const kvData = await puter.kv.get(`party_${partyId}`);
             if (kvData) {
-                console.log(`Found party ${partyId} via KV store`);
+                console.log(`⚠️ Found party ${partyId} via KV store (same user only)`);
                 return kvData;
             }
         } catch (e) {
-            console.log(`KV store access failed: ${e.message}`);
+            console.log(`❌ KV store access failed: ${e.message}`);
         }
         
-        console.log(`Party ${partyId} not found in any storage method`);
+        console.log(`❌ Party ${partyId} not found in any storage method`);
         return null;
     } catch (error) {
         console.error(`Error reading party ${partyId}:`, error);
@@ -1133,12 +1360,12 @@ async function writePartyData(partyId, partyData) {
     let success = false;
     const errors = [];
     
-    console.log(`Writing party data for ${partyId}:`, partyData);
+    console.log(`🌐 [${user?.username || user?.uuid || 'Unknown'}] Writing party data for CROSS-USER access: ${partyId}`);
     
-    // Method 1: Try hosting approach (for cross-user access) - Skip in debug mode
-    if (!DEBUG_MODE) {
-        try {
-            const htmlContent = `<!DOCTYPE html>
+    // PRIMARY: Hosting approach for cross-user access - ALWAYS ENABLED
+    try {
+        console.log(`🚀 Setting up hosting for cross-user access...`);
+        const htmlContent = `<!DOCTYPE html>
 <html>
 <head>
     <title>Party Data ${partyId}</title>
@@ -1148,65 +1375,80 @@ async function writePartyData(partyId, partyData) {
         if (window.location.pathname.includes('data.json')) {
             document.write('${JSON.stringify(partyData).replace(/'/g, "\\'").replace(/"/g, '\\"')}');
         } else {
-            document.write('<h1>Party ${partyId}</h1><p>Active party data endpoint.</p>');
+            document.write('<h1>Party ${partyId}</h1><p>Cross-user party data endpoint.</p>');
         }
     <\/script>
 </head>
 <body></body>
 </html>`;
-            
-            const hostingDir = `party-hosting-${partyId}`;
-            await puter.fs.mkdir(hostingDir, { createMissingParents: true });
-            await puter.fs.write(`${hostingDir}/index.html`, htmlContent, { overwrite: true });
-            await puter.fs.write(`${hostingDir}/data.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
-            
-            const subdomain = `party-data-${partyId.toLowerCase()}`;
-            try {
-                await puter.hosting.create(subdomain, hostingDir);
-                console.log(`Party ${partyId} hosted at: https://${subdomain}.puter.site`);
+        
+        const hostingDir = `party-hosting-${partyId}`;
+        await puter.fs.mkdir(hostingDir, { createMissingParents: true });
+        await puter.fs.write(`${hostingDir}/index.html`, htmlContent, { overwrite: true });
+        await puter.fs.write(`${hostingDir}/data.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
+        
+        const subdomain = `party-data-${partyId.toLowerCase()}`;
+        try {
+            await puter.hosting.create(subdomain, hostingDir);
+            console.log(`✅ Party ${partyId} hosted for cross-user access: https://${subdomain}.puter.site`);
+            success = true;
+        } catch (e) {
+            if (e.message.includes('already exists')) {
+                await puter.hosting.update(subdomain, hostingDir);
+                console.log(`✅ Party ${partyId} updated for cross-user access: https://${subdomain}.puter.site`);
                 success = true;
-            } catch (e) {
-                if (e.message.includes('already exists')) {
-                    await puter.hosting.update(subdomain, hostingDir);
-                    console.log(`Party ${partyId} updated at: https://${subdomain}.puter.site`);
-                    success = true;
-                } else {
-                    errors.push(`Hosting error: ${e.message}`);
-                    console.error(`Hosting error for party ${partyId}:`, e);
-                }
+            } else {
+                errors.push(`Hosting error: ${e.message}`);
+                console.error(`❌ Hosting error for party ${partyId}:`, e);
             }
-        } catch (error) {
-            errors.push(`Hosting setup error: ${error.message}`);
-            console.error(`Hosting setup error for party ${partyId}:`, error);
         }
-    } else {
-        console.log('DEBUG_MODE: Skipping hosting storage');
+    } catch (error) {
+        errors.push(`Hosting setup error: ${error.message}`);
+        console.error(`❌ Hosting setup error for party ${partyId}:`, error);
     }
     
-    // Method 2: Direct file storage (fallback)
-    try {
-        await puter.fs.write(`party_${partyId}.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
-        console.log(`Party ${partyId} stored as direct file`);
-        success = true;
-    } catch (error) {
-        errors.push(`File storage error: ${error.message}`);
-        console.error(`File storage error for party ${partyId}:`, error);
+    // BACKUP: Direct file storage (with retry logic)
+    let fileAttempts = 0;
+    while (fileAttempts < 3) {
+        try {
+            await puter.fs.write(`party_${partyId}.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
+            console.log(`📁 Party ${partyId} stored as backup file (attempt ${fileAttempts + 1})`);
+            success = true;
+            break;
+        } catch (error) {
+            fileAttempts++;
+            console.warn(`⚠️ File backup attempt ${fileAttempts} failed:`, error.message);
+            if (fileAttempts === 3) {
+                errors.push(`File storage error (after 3 attempts): ${error.message}`);
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
     }
     
-    // Method 3: KV store (backup)
-    try {
-        await puter.kv.set(`party_${partyId}`, partyData);
-        console.log(`Party ${partyId} stored in KV store`);
-        success = true;
-    } catch (error) {
-        errors.push(`KV store error: ${error.message}`);
-        console.error(`KV store error for party ${partyId}:`, error);
+    // BACKUP: KV store (with retry logic)
+    let kvAttempts = 0;
+    while (kvAttempts < 3) {
+        try {
+            await puter.kv.set(`party_${partyId}`, partyData);
+            console.log(`🖾 Party ${partyId} stored in KV backup (attempt ${kvAttempts + 1})`);
+            success = true;
+            break;
+        } catch (error) {
+            kvAttempts++;
+            console.warn(`⚠️ KV backup attempt ${kvAttempts} failed:`, error.message);
+            if (kvAttempts === 3) {
+                errors.push(`KV store error (after 3 attempts): ${error.message}`);
+            } else {
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+        }
     }
     
     if (!success) {
-        console.error(`All storage methods failed for party ${partyId}:`, errors);
+        console.error(`❌ ALL storage methods failed for party ${partyId}:`, errors);
     } else {
-        console.log(`Party ${partyId} stored successfully via at least one method`);
+        console.log(`✅ [${user?.username || user?.uuid || 'Unknown'}] Party ${partyId} stored successfully for cross-user access`);
     }
     
     return success;
@@ -1214,44 +1456,40 @@ async function writePartyData(partyId, partyData) {
 
 async function deletePartyData(partyId) {
     const results = [];
-    console.log(`Deleting party data for ${partyId}`);
+    console.log(`🗑️ Deleting cross-user party data for ${partyId}`);
     
-    // Try to delete from hosting (skip in debug mode)
-    if (!DEBUG_MODE) {
-        try {
-            const subdomain = `party-data-${partyId.toLowerCase()}`;
-            await puter.hosting.delete(subdomain);
-            results.push(`Deleted hosting: ${subdomain}`);
-        } catch (e) {
-            results.push(`Hosting deletion failed: ${e.message}`);
-        }
-        
-        // Try to delete hosting directory
-        try {
-            const hostingDir = `party-hosting-${partyId}`;
-            await puter.fs.delete(hostingDir, { recursive: true });
-            results.push(`Deleted directory: ${hostingDir}`);
-        } catch (e) {
-            results.push(`Directory deletion failed: ${e.message}`);
-        }
-    } else {
-        results.push('DEBUG_MODE: Skipped hosting cleanup');
+    // PRIMARY: Delete hosting (cross-user endpoint)
+    try {
+        const subdomain = `party-data-${partyId.toLowerCase()}`;
+        await puter.hosting.delete(subdomain);
+        results.push(`✅ Deleted cross-user hosting: ${subdomain}`);
+    } catch (e) {
+        results.push(`⚠️ Hosting deletion failed: ${e.message}`);
     }
     
-    // Try to delete direct file
+    // Delete hosting directory
+    try {
+        const hostingDir = `party-hosting-${partyId}`;
+        await puter.fs.delete(hostingDir, { recursive: true });
+        results.push(`✅ Deleted hosting directory: ${hostingDir}`);
+    } catch (e) {
+        results.push(`⚠️ Directory deletion failed: ${e.message}`);
+    }
+    
+    // BACKUP: Delete direct file
     try {
         await puter.fs.delete(`party_${partyId}.json`);
-        results.push(`Deleted file: party_${partyId}.json`);
+        results.push(`✅ Deleted backup file: party_${partyId}.json`);
     } catch (e) {
-        results.push(`File deletion failed: ${e.message}`);
+        results.push(`⚠️ File deletion failed: ${e.message}`);
     }
     
-    // Try to delete from KV store
+    // BACKUP: Delete from KV store
     try {
         await puter.kv.del(`party_${partyId}`);
-        results.push(`Deleted from KV store: party_${partyId}`);
+        results.push(`✅ Deleted from KV backup: party_${partyId}`);
     } catch (e) {
-        results.push(`KV deletion failed: ${e.message}`);
+        results.push(`⚠️ KV deletion failed: ${e.message}`);
     }
     
     console.log(`Party ${partyId} deletion results:`, results);
