@@ -4,45 +4,454 @@
 <meta charset="UTF-8">
 <title>Puter.js Party System</title>
 <script src="https://js.puter.com/v2/"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-  body { font-family: sans-serif; background:#111; color:#eee; text-align:center; padding:2rem;}
-  button { margin:0.5rem; padding:0.6rem 1rem; border:none; border-radius:8px; background:#333; color:#eee; cursor:pointer; transition: background 0.2s;}
-  button:hover { background:#444; }
-  button:disabled { background:#222; cursor: not-allowed; }
-  #partyInfo { margin-top:2rem; background:#222; padding:1rem; border-radius:10px; }
-  #chatContainer { margin-top:2rem; background:#222; padding:1rem; border-radius:10px; display:none; text-align:left; max-width:600px; margin-left:auto; margin-right:auto; }
-  #chatMessages { height:300px; overflow-y:auto; background:#111; padding:1rem; border-radius:5px; margin-bottom:1rem; }
-  #chatInput { width:70%; padding:0.5rem; border:none; border-radius:5px; background:#333; color:#eee; }
-  #sendBtn { width:25%; }
-  .message { margin-bottom:0.5rem; padding:0.5rem; background:#333; border-radius:5px; word-wrap: break-word; }
-  .system-message { background:#444; font-style: italic; color: #aaa; }
-  .error { color:#ff6b6b; margin-top:1rem; }
-  .success { color:#4ade80; margin-top:1rem; }
-  .party-code { font-family: monospace; font-size: 1.2em; font-weight: bold; color: #4ade80; }
-  .host-crown { color: #fbbf24; }
+* {
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #141313;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  color: #e0e0e0;
+  overflow-x: hidden;
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  padding: 20px;
+  gap: 20px;
+  background: radial-gradient(circle at top right, #1e1c1c, #141313);
+}
+
+.header {
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
+  border: 1px solid #2c2b2b;
+  border-radius: 25px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #ff6b3944, transparent);
+}
+
+.logo h1 {
+  font-size: 2rem;
+  margin: 0;
+  background: linear-gradient(45deg, #ff6b39, #ff8c5a);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+}
+
+.logo span {
+  color: #a0a0a0;
+  font-size: 0.9rem;
+  letter-spacing: 1px;
+}
+
+.auth-section {
+  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
+  border: 1px solid #2c2b2b;
+  border-radius: 25px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.party-actions {
+  display: none;
+  gap: 10px;
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.party-actions.visible {
+  display: flex;
+}
+
+.action-btn {
+  background: linear-gradient(145deg, #262525, #212020);
+  border: 1px solid #444343;
+  border-radius: 15px;
+  padding: 12px 16px;
+  color: #e8e8e8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 50px;
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+}
+
+.action-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 7px 15px rgba(0, 0, 0, 0.2);
+  border-color: #4a4949;
+  color: #ff8c5a;
+}
+
+.action-btn .icon {
+  font-size: 1.1rem;
+  color: #ff6b39;
+}
+
+.party-info {
+  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
+  border: 1px solid #2c2b2b;
+  border-radius: 25px;
+  padding: 24px;
+  margin-top: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: none;
+}
+
+.party-info.visible {
+  display: block;
+}
+
+.party-code {
+  font-family: monospace;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #ff6b39;
+  background: rgba(255, 107, 57, 0.1);
+  padding: 12px 20px;
+  border-radius: 15px;
+  margin: 10px 0;
+  letter-spacing: 2px;
+  text-align: center;
+  border: 1px solid #ff6b3930;
+}
+
+.members-list {
+  margin-top: 20px;
+}
+
+.members-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.members-list li {
+  background: linear-gradient(90deg, #262525 0%, #242323 100%);
+  border: 1px solid #3a3939;
+  padding: 12px 16px;
+  border-radius: 12px;
+  margin: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.member-name {
+  flex: 1;
+  font-weight: 500;
+}
+
+.member-badge {
+  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: rgba(255, 107, 57, 0.2);
+  color: #ff8c5a;
+}
+
+.chat-container {
+  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
+  border: 1px solid #2c2b2b;
+  border-radius: 25px;
+  padding: 24px;
+  margin-top: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  display: none;
+  flex-direction: column;
+  height: 50vh;
+}
+
+.chat-container.visible {
+  display: flex;
+}
+
+.chat-header {
+  text-align: center;
+  margin-bottom: 20px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid #2c2b2b;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.chat-header h3 {
+  margin: 0;
+  font-size: 1.4rem;
+  color: #ff6b39;
+  flex: 1;
+}
+
+.fullscreen-btn {
+  background: linear-gradient(145deg, #262525, #212020);
+  border: 1px solid #444343;
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  color: #ff6b39;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.fullscreen-btn:hover {
+  background: linear-gradient(145deg, #ff6b39, #ff8c5a);
+  color: white;
+  transform: scale(1.05);
+}
+
+.fullscreen-mode {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 10000 !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  background: #141313;
+  border-radius: 15px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #2c2b2b;
+}
+
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: #ff6b39;
+  border-radius: 10px;
+}
+
+.message {
+  margin-bottom: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(90deg, #262525 0%, #242323 100%);
+  border-radius: 15px;
+  border: 1px solid #3a3939;
+  word-wrap: break-word;
+  position: relative;
+}
+
+.message .username {
+  font-weight: 600;
+  color: #ff8c5a;
+  margin-bottom: 4px;
+}
+
+.message .timestamp {
+  font-size: 0.7rem;
+  color: #888;
+  position: absolute;
+  top: 8px;
+  right: 12px;
+}
+
+.system-message {
+  background: linear-gradient(90deg, #444343 0%, #3a3939 100%) !important;
+  font-style: italic;
+  color: #aaa;
+  text-align: center;
+}
+
+.chat-input-container {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 14px 18px;
+  border: 1px solid #444343;
+  border-radius: 15px;
+  background: #262525;
+  color: #e0e0e0;
+  font-size: 1rem;
+  outline: none;
+}
+
+.chat-input:focus {
+  border-color: #ff6b39;
+  box-shadow: 0 0 0 2px rgba(255, 107, 57, 0.2);
+}
+
+.send-btn {
+  width: 60px;
+  height: 60px;
+  background: linear-gradient(145deg, #ff6b39, #ff8c5a);
+  border: none;
+  border-radius: 15px;
+  color: white;
+  font-size: 1.4rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 10px rgba(255, 107, 57, 0.3);
+}
+
+.send-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 15px rgba(255, 107, 57, 0.4);
+}
+
+.status-message {
+  padding: 12px 20px;
+  border-radius: 12px;
+  margin: 10px 0;
+  text-align: center;
+  font-weight: 500;
+}
+
+.error {
+  background: rgba(255, 107, 107, 0.1);
+  border: 1px solid rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+}
+
+.success {
+  background: rgba(74, 222, 128, 0.1);
+  border: 1px solid rgba(74, 222, 128, 0.3);
+  color: #4ade80;
+}
+
+.host-crown {
+  color: #fbbf24;
+}
+
+/* Mobile optimizations for very narrow screens */
+@media (max-width: 400px) {
+  .container {
+    padding: 10px;
+    gap: 15px;
+  }
+  
+  .header, .auth-section, .party-info, .chat-container {
+    padding: 16px;
+  }
+  
+  .logo h1 {
+    font-size: 1.6rem;
+  }
+  
+  .party-code {
+    font-size: 1.4rem;
+    padding: 8px 12px;
+  }
+  
+  .action-btn {
+    height: 45px;
+    padding: 10px 12px;
+    font-size: 0.8rem;
+  }
+  
+  .action-btn .icon {
+    font-size: 1rem;
+  }
+  
+  .chat-container {
+    height: 45vh;
+  }
+}
 </style>
 </head>
 <body>
 
-<h1>🎉 Party System</h1>
+<div class="container">
+  <div class="header">
+    <div class="logo">
+      <h1><i class="fas fa-users"></i> Party Hub</h1>
+      <span>Connect & Chat Together</span>
+    </div>
+  </div>
 
-<button id="signIn">Sign In</button>
+  <div class="auth-section" id="authSection">
+    <button class="action-btn" id="signIn">
+      <i class="fas fa-sign-in-alt icon"></i>
+      Sign In to Start
+    </button>
+  </div>
 
-<div id="partyActions" style="display:none;">
-  <button id="createPartyBtn">Create Party</button>
-  <button id="joinPartyBtn">Join Party</button>
-  <button id="leavePartyBtn">Leave Party</button>
-</div>
+  <div class="auth-section party-actions" id="partyActions">
+    <button class="action-btn" id="createPartyBtn">
+      <i class="fas fa-plus icon"></i>
+      Create Party
+    </button>
+    <button class="action-btn" id="joinPartyBtn">
+      <i class="fas fa-door-open icon"></i>
+      Join Party
+    </button>
+    <button class="action-btn" id="leavePartyBtn" style="display: none;">
+      <i class="fas fa-sign-out-alt icon"></i>
+      Leave Party
+    </button>
+  </div>
 
-<div id="partyInfo"></div>
-<div id="error"></div>
+  <div id="statusMessages"></div>
 
-<div id="chatContainer">
-  <h3>💬 Party Chat</h3>
-  <div id="chatMessages"></div>
-  <div>
-    <input type="text" id="chatInput" placeholder="Type a message..." maxlength="200">
-    <button id="sendBtn">Send</button>
+  <div class="party-info" id="partyInfo">
+    <!-- Party information will be populated here -->
+  </div>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="chat-header">
+      <h3><i class="fas fa-comments"></i> Party Chat</h3>
+      <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">
+        <i class="fas fa-expand" id="fullscreenIcon"></i>
+      </button>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <!-- Chat messages will appear here -->
+    </div>
+    <div class="chat-input-container">
+      <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." maxlength="200">
+      <button class="send-btn" id="sendBtn">
+        <i class="fas fa-paper-plane"></i>
+      </button>
+    </div>
   </div>
 </div>
 
@@ -54,9 +463,12 @@ let user, partyId, pollInterval;
 document.getElementById("signIn").addEventListener("click", async () => {
     await puter.auth.signIn();
     user = await puter.auth.getUser();
-    document.getElementById("partyInfo").innerHTML = `<p>Welcome, ${user.username || user.uuid}</p>`;
-    document.getElementById("signIn").style.display = "none";
-    document.getElementById("partyActions").style.display = "block";
+    
+    // Hide auth section and show party actions
+    document.getElementById("authSection").style.display = "none";
+    document.getElementById("partyActions").classList.add("visible");
+    
+    showStatusMessage(`Welcome, ${user.username || user.uuid}!`, "success");
 });
 
 // Create party
@@ -77,11 +489,18 @@ document.getElementById("createPartyBtn").addEventListener("click", async () => 
         // Store party in KV store
         await puter.kv.set(`party_${partyId}`, partyData);
         
-        showError(`Party created! Share code: ${partyId}`, "success");
-        document.getElementById("chatContainer").style.display = "block";
+        showStatusMessage(`Party created! Share code: ${partyId}`, "success");
+        document.getElementById("partyInfo").classList.add("visible");
+        document.getElementById("chatContainer").classList.add("visible");
+        
+        // Show leave button and hide create/join buttons
+        document.getElementById("leavePartyBtn").style.display = "flex";
+        document.getElementById("createPartyBtn").style.display = "none";
+        document.getElementById("joinPartyBtn").style.display = "none";
+        
         startPolling();
     } catch (error) {
-        showError(`Failed to create party: ${error.message}`);
+        showStatusMessage(`Failed to create party: ${error.message}`, "error");
     }
 });
 
@@ -97,7 +516,7 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
         const partyData = await puter.kv.get(`party_${partyId}`);
         
         if (!partyData) {
-            showError("Party not found! Please check the code.");
+            showStatusMessage("Party not found! Please check the code.", "error");
             return;
         }
         
@@ -119,11 +538,18 @@ document.getElementById("joinPartyBtn").addEventListener("click", async () => {
             await puter.kv.set(`party_${partyId}`, partyData);
         }
         
-        showError(`Joined party: ${partyId}`, "success");
-        document.getElementById("chatContainer").style.display = "block";
+        showStatusMessage(`Joined party: ${partyId}`, "success");
+        document.getElementById("partyInfo").classList.add("visible");
+        document.getElementById("chatContainer").classList.add("visible");
+        
+        // Show leave button and hide create/join buttons
+        document.getElementById("leavePartyBtn").style.display = "flex";
+        document.getElementById("createPartyBtn").style.display = "none";
+        document.getElementById("joinPartyBtn").style.display = "none";
+        
         startPolling();
     } catch (error) {
-        showError(`Failed to join party: ${error.message}`);
+        showStatusMessage(`Failed to join party: ${error.message}`, "error");
     }
 });
 
@@ -162,11 +588,17 @@ document.getElementById("leavePartyBtn").addEventListener("click", async () => {
         
         clearInterval(pollInterval);
         partyId = null;
-        document.getElementById("partyInfo").innerHTML = `<p>Left the party.</p>`;
-        document.getElementById("chatContainer").style.display = "none";
-        showError("Left the party", "success");
+        document.getElementById("partyInfo").classList.remove("visible");
+        document.getElementById("chatContainer").classList.remove("visible");
+        
+        // Show create/join buttons and hide leave button
+        document.getElementById("leavePartyBtn").style.display = "none";
+        document.getElementById("createPartyBtn").style.display = "flex";
+        document.getElementById("joinPartyBtn").style.display = "flex";
+        
+        showStatusMessage("Left the party", "success");
     } catch (error) {
-        showError(`Failed to leave party: ${error.message}`);
+        showStatusMessage(`Failed to leave party: ${error.message}`, "error");
     }
 });
 
@@ -191,19 +623,38 @@ async function updateUI() {
         const partyData = await puter.kv.get(`party_${partyId}`);
         
         if (!partyData) {
-            showError("Party no longer exists!");
+            showStatusMessage("Party no longer exists!", "error");
             clearInterval(pollInterval);
             partyId = null;
-            document.getElementById("chatContainer").style.display = "none";
+            document.getElementById("partyInfo").classList.remove("visible");
+            document.getElementById("chatContainer").classList.remove("visible");
+            
+            // Show create/join buttons and hide leave button
+            document.getElementById("leavePartyBtn").style.display = "none";
+            document.getElementById("createPartyBtn").style.display = "flex";
+            document.getElementById("joinPartyBtn").style.display = "flex";
+            
             return;
         }
         
         // Update party info
         document.getElementById("partyInfo").innerHTML = `
-            <h2>🎉 Party Code: <span class="party-code">${partyId}</span></h2>
-            <p><strong>Host:</strong> ${partyData.host} <span class="host-crown">👑</span></p>
-            <p><strong>Members (${partyData.members.length}):</strong></p>
-            <ul>${partyData.members.map(m => `<li>${m}${m === (user.username || user.uuid) ? ' (You)' : ''}${m === partyData.host ? ' 👑' : ''}</li>`).join("")}</ul>
+            <div class="party-code">${partyId}</div>
+            <div style="text-align: center; margin: 15px 0;">
+                <strong>Host:</strong> ${partyData.host} <i class="fas fa-crown host-crown"></i>
+            </div>
+            <div class="members-list">
+                <h4 style="margin: 15px 0 10px 0; text-align: center;">Members (${partyData.members.length})</h4>
+                <ul>
+                    ${partyData.members.map(m => `
+                        <li>
+                            <span class="member-name">${m}</span>
+                            ${m === (user.username || user.uuid) ? '<span class="member-badge">You</span>' : ''}
+                            ${m === partyData.host ? '<i class="fas fa-crown host-crown"></i>' : ''}
+                        </li>
+                    `).join("")}
+                </ul>
+            </div>
         `;
         
         // Update chat
@@ -219,6 +670,66 @@ document.getElementById("chatInput").addEventListener("keypress", (e) => {
     if (e.key === "Enter") sendMessage();
 });
 
+// Fullscreen functionality
+document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
+
+function toggleFullscreen() {
+    const chatContainer = document.getElementById("chatContainer");
+    const fullscreenIcon = document.getElementById("fullscreenIcon");
+    const container = document.querySelector(".container");
+    
+    if (chatContainer.classList.contains("fullscreen-mode")) {
+        // Exit fullscreen
+        chatContainer.classList.remove("fullscreen-mode");
+        fullscreenIcon.className = "fas fa-expand";
+        document.getElementById("fullscreenBtn").title = "Enter Fullscreen";
+        
+        // Show other elements
+        const elementsToShow = [
+            document.querySelector(".header"),
+            document.getElementById("authSection"),
+            document.getElementById("partyActions"),
+            document.getElementById("statusMessages"),
+            document.getElementById("partyInfo")
+        ];
+        
+        elementsToShow.forEach(element => {
+            if (element) element.style.display = "";
+        });
+        
+        // Restore original chat height
+        chatContainer.style.height = "50vh";
+    } else {
+        // Enter fullscreen
+        chatContainer.classList.add("fullscreen-mode");
+        fullscreenIcon.className = "fas fa-compress";
+        document.getElementById("fullscreenBtn").title = "Exit Fullscreen";
+        
+        // Hide other elements
+        const elementsToHide = [
+            document.querySelector(".header"),
+            document.getElementById("authSection"),
+            document.getElementById("partyActions"),
+            document.getElementById("statusMessages"),
+            document.getElementById("partyInfo")
+        ];
+        
+        elementsToHide.forEach(element => {
+            if (element) element.style.display = "none";
+        });
+        
+        // Make chat fill entire screen
+        chatContainer.style.height = "100vh";
+    }
+}
+
+// Exit fullscreen with Escape key
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && document.getElementById("chatContainer").classList.contains("fullscreen-mode")) {
+        toggleFullscreen();
+    }
+});
+
 async function sendMessage() {
     const input = document.getElementById("chatInput");
     const message = input.value.trim();
@@ -228,7 +739,7 @@ async function sendMessage() {
         const partyData = await puter.kv.get(`party_${partyId}`);
         
         if (!partyData) {
-            showError("Party no longer exists!");
+            showStatusMessage("Party no longer exists!", "error");
             return;
         }
         
@@ -254,34 +765,43 @@ async function sendMessage() {
         // Update UI immediately to show the message
         updateChatUI(partyData.messages);
     } catch (error) {
-        showError(`Failed to send message: ${error.message}`);
+        showStatusMessage(`Failed to send message: ${error.message}`, "error");
     }
 }
 
 function updateChatUI(messages) {
     const chatContainer = document.getElementById("chatMessages");
     chatContainer.innerHTML = messages.map(msg => {
-        const messageClass = msg.type === 'system' ? 'message system-message' : 'message';
-        const userDisplay = msg.type === 'system' ? '' : `<strong>${msg.user}:</strong> `;
-        const messageStyle = msg.type === 'system' ? 'style="font-style: italic; color: #888;"' : '';
+        const isSystemMessage = msg.type === 'system';
+        const messageClass = isSystemMessage ? 'message system-message' : 'message';
         
-        return `
-            <div class="${messageClass}" ${messageStyle}>
-                ${userDisplay}${msg.message}
-                <small style="float:right; color:#888;">${msg.timestamp}</small>
-            </div>
-        `;
+        if (isSystemMessage) {
+            return `
+                <div class="${messageClass}">
+                    ${msg.message}
+                    <span class="timestamp">${msg.timestamp}</span>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="${messageClass}">
+                    <div class="username">${msg.user}</div>
+                    <div>${msg.message}</div>
+                    <span class="timestamp">${msg.timestamp}</span>
+                </div>
+            `;
+        }
     }).join("");
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
-function showError(message, type = "error") {
-    const errorDiv = document.getElementById("error");
+function showStatusMessage(message, type = "error") {
+    const statusDiv = document.getElementById("statusMessages");
     const className = type === 'success' ? 'success' : 'error';
-    errorDiv.innerHTML = `<div class="${className}">${message}</div>`;
+    statusDiv.innerHTML = `<div class="status-message ${className}">${message}</div>`;
     setTimeout(() => {
-        errorDiv.innerHTML = "";
-    }, 3000);
+        statusDiv.innerHTML = "";
+    }, 4000);
 }
 </script>
 
