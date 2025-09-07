@@ -1,1607 +1,319 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Puter.js Party System</title>
-<script src="https://js.puter.com/v2/"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-* {
-  box-sizing: border-box;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meritcommons: A Manifesto of Labor, Creation, and Justice</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Crimson+Pro:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-html, body {
-  margin: 0;
-  height: 100%;
-  background: #141313;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  color: #e0e0e0;
-  overflow-x: hidden;
-}
+        body {
+            font-family: 'Crimson Pro', serif;
+            line-height: 1.6;
+            color: #3E2C1D;
+            background: #D9C7B8;
+            padding: 20px;
+            background-image: 
+                radial-gradient(#A58D76 1px, transparent 1px),
+                radial-gradient(#A58D76 1px, transparent 1px);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
 
-.container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  padding: 20px;
-  gap: 20px;
-  background: radial-gradient(circle at top right, #1e1c1c, #141313);
-}
+        .container {
+            max-width: 900px;
+            margin: 40px auto;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            border-radius: 5px;
+            overflow: hidden;
+        }
 
-.header {
-  text-align: center;
-  padding: 20px;
-  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
-  border: 1px solid #2c2b2b;
-  border-radius: 25px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-}
+        header {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #5D3F6A 0%, #3C1250 100%);
+            border-bottom: 5px solid #2D0B40;
+            color: #F5EFFF;
+        }
 
-.header::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, #ff6b3944, transparent);
-}
+        header h1,
+        header p {
+            text-align: center;
+            margin-left: auto;
+            margin-right: auto;
+        }
 
-.logo h1 {
-  font-size: 2rem;
-  margin: 0;
-  background: linear-gradient(45deg, #ff6b39, #ff8c5a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
+        h1 {
+            font-family: 'Cinzel', serif;
+            font-size: 3.2rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            letter-spacing: 1px;
+        }
 
-.logo span {
-  color: #a0a0a0;
-  font-size: 0.9rem;
-  letter-spacing: 1px;
-}
+        .subtitle {
+            font-style: italic;
+            font-size: 1.4rem;
+            opacity: 0.9;
+            margin-bottom: 20px;
+        }
 
-.auth-section {
-  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
-  border: 1px solid #2c2b2b;
-  border-radius: 25px;
-  padding: 24px;
-  text-align: center;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-}
+        .author {
+            font-size: 1.2rem;
+            margin-top: 20px;
+        }
 
-.party-actions {
-  display: none;
-  gap: 10px;
-  flex-direction: row;
-  flex-wrap: wrap;
-}
+        .book-content {
+            padding: 50px;
+            background: #F2E6CF;
+            background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23a58d76' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E");
+            position: relative;
+        }
 
-.party-actions.visible {
-  display: flex;
-}
+        .book-content::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(rgba(227, 202, 165, 0.7), rgba(245, 230, 207, 0.7) 15%);
+            pointer-events: none;
+        }
 
-.action-btn {
-  background: linear-gradient(145deg, #262525, #212020);
-  border: 1px solid #444343;
-  border-radius: 15px;
-  padding: 12px 16px;
-  color: #e8e8e8;
-  font-size: 0.9rem;
-  font-weight: 500;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  height: 50px;
-  flex: 1;
-  min-width: 0;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
-}
+        .chapter {
+            margin-bottom: 50px;
+            position: relative;
+            z-index: 1;
+        }
 
-.action-btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 7px 15px rgba(0, 0, 0, 0.2);
-  border-color: #4a4949;
-  color: #ff8c5a;
-}
+        .chapter-title {
+            font-family: 'Cinzel', serif;
+            font-size: 1.8rem;
+            color: #5D3F6A;
+            border-bottom: 2px solid #B8A0A9;
+            padding-bottom: 10px;
+            margin-bottom: 25px;
+        }
 
-.action-btn .icon {
-  font-size: 1.1rem;
-  color: #ff6b39;
-}
+        p {
+            margin-bottom: 20px;
+            font-size: 1.2rem;
+            text-align: justify;
+        }
 
-.party-info {
-  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
-  border: 1px solid #2c2b2b;
-  border-radius: 25px;
-  padding: 24px;
-  margin-top: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  display: none;
-}
+        .first-letter::first-letter {
+            font-family: 'Cinzel', serif;
+            font-size: 2.5rem;
+            color: #5D3F6A;
+            float: left;
+            line-height: 1;
+            margin-right: 8px;
+            margin-top: 5px;
+        }
 
-.party-info.visible {
-  display: block;
-}
+        footer {
+            text-align: center;
+            padding: 20px;
+            background: #3C1250;
+            color: #D9C7B8;
+            font-size: 0.9rem;
+        }
 
-.party-code {
-  font-family: monospace;
-  font-size: 1.8rem;
-  font-weight: bold;
-  color: #ff6b39;
-  background: rgba(255, 107, 57, 0.1);
-  padding: 12px 20px;
-  border-radius: 15px;
-  margin: 10px 0;
-  letter-spacing: 2px;
-  text-align: center;
-  border: 1px solid #ff6b3930;
-}
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .book-content {
+                padding: 25px;
+            }
+            
+            h1 {
+                font-size: 2.5rem;
+            }
+            
+            .subtitle {
+                font-size: 1.2rem;
+            }
+        }
 
-.members-list {
-  margin-top: 20px;
-}
-
-.members-list ul {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0;
-}
-
-.members-list li {
-  background: linear-gradient(90deg, #262525 0%, #242323 100%);
-  border: 1px solid #3a3939;
-  padding: 12px 16px;
-  border-radius: 12px;
-  margin: 8px 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.member-name {
-  flex: 1;
-  font-weight: 500;
-}
-
-.member-badge {
-  font-size: 0.8rem;
-  padding: 4px 8px;
-  border-radius: 8px;
-  background: rgba(255, 107, 57, 0.2);
-  color: #ff8c5a;
-}
-
-.chat-container {
-  background: linear-gradient(180deg, #1b1a1a 0%, #191818 100%);
-  border: 1px solid #2c2b2b;
-  border-radius: 25px;
-  padding: 24px;
-  margin-top: 20px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-  display: none;
-  flex-direction: column;
-  height: 50vh;
-}
-
-.chat-container.visible {
-  display: flex;
-}
-
-.chat-header {
-  text-align: center;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #2c2b2b;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.chat-header h3 {
-  margin: 0;
-  font-size: 1.4rem;
-  color: #ff6b39;
-  flex: 1;
-}
-
-.fullscreen-btn {
-  background: linear-gradient(145deg, #262525, #212020);
-  border: 1px solid #444343;
-  border-radius: 12px;
-  width: 40px;
-  height: 40px;
-  color: #ff6b39;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1rem;
-  transition: all 0.3s ease;
-}
-
-.fullscreen-btn:hover {
-  background: linear-gradient(145deg, #ff6b39, #ff8c5a);
-  color: white;
-  transform: scale(1.05);
-}
-
-.fullscreen-mode {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  z-index: 10000 !important;
-  margin: 0 !important;
-  border-radius: 0 !important;
-}
-
-.chat-messages {
-  flex: 1;
-  overflow-y: auto;
-  background: #141313;
-  border-radius: 15px;
-  padding: 16px;
-  margin-bottom: 16px;
-  border: 1px solid #2c2b2b;
-}
-
-.chat-messages::-webkit-scrollbar {
-  width: 4px;
-}
-
-.chat-messages::-webkit-scrollbar-thumb {
-  background: #ff6b39;
-  border-radius: 10px;
-}
-
-.message {
-  margin-bottom: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(90deg, #262525 0%, #242323 100%);
-  border-radius: 15px;
-  border: 1px solid #3a3939;
-  word-wrap: break-word;
-  position: relative;
-}
-
-.message .username {
-  font-weight: 600;
-  color: #ff8c5a;
-  margin-bottom: 4px;
-}
-
-.message .timestamp {
-  font-size: 0.7rem;
-  color: #888;
-  position: absolute;
-  top: 8px;
-  right: 12px;
-}
-
-.system-message {
-  background: linear-gradient(90deg, #444343 0%, #3a3939 100%) !important;
-  font-style: italic;
-  color: #aaa;
-  text-align: center;
-}
-
-.chat-input-container {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-}
-
-.chat-input {
-  flex: 1;
-  padding: 14px 18px;
-  border: 1px solid #444343;
-  border-radius: 15px;
-  background: #262525;
-  color: #e0e0e0;
-  font-size: 1rem;
-  outline: none;
-}
-
-.chat-input:focus {
-  border-color: #ff6b39;
-  box-shadow: 0 0 0 2px rgba(255, 107, 57, 0.2);
-}
-
-.send-btn {
-  width: 60px;
-  height: 60px;
-  background: linear-gradient(145deg, #ff6b39, #ff8c5a);
-  border: none;
-  border-radius: 15px;
-  color: white;
-  font-size: 1.4rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 10px rgba(255, 107, 57, 0.3);
-}
-
-.send-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 15px rgba(255, 107, 57, 0.4);
-}
-
-.status-message {
-  padding: 12px 20px;
-  border-radius: 12px;
-  margin: 10px 0;
-  text-align: center;
-  font-weight: 500;
-}
-
-.error {
-  background: rgba(255, 107, 107, 0.1);
-  border: 1px solid rgba(255, 107, 107, 0.3);
-  color: #ff6b6b;
-}
-
-.success {
-  background: rgba(74, 222, 128, 0.1);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #4ade80;
-}
-
-.host-crown {
-  color: #fbbf24;
-}
-
-/* Mobile optimizations for very narrow screens */
-@media (max-width: 400px) {
-  .container {
-    padding: 10px;
-    gap: 15px;
-  }
-  
-  .header, .auth-section, .party-info, .chat-container {
-    padding: 16px;
-  }
-  
-  .logo h1 {
-    font-size: 1.6rem;
-  }
-  
-  .party-code {
-    font-size: 1.4rem;
-    padding: 8px 12px;
-  }
-  
-  .action-btn {
-    height: 45px;
-    padding: 10px 12px;
-    font-size: 0.8rem;
-  }
-  
-  .action-btn .icon {
-    font-size: 1rem;
-  }
-  
-  .chat-container {
-    height: 45vh;
-  }
-}
-</style>
+        /* Decorative elements */
+        .ornament {
+            text-align: center;
+            margin: 30px 0;
+            font-size: 1.8rem;
+            color: #A58D76;
+            letter-spacing: 10px;
+        }
+        
+        .add-content {
+            background: rgba(165, 141, 118, 0.2);
+            padding: 20px;
+            border-radius: 5px;
+            margin-top: 40px;
+            border-left: 3px solid #5D3F6A;
+        }
+    </style>
 </head>
 <body>
-
-<div class="container">
-  <div class="header">
-    <div class="logo">
-      <h1><i class="fas fa-users"></i> Party Hub</h1>
-      <span>Connect & Chat Together</span>
-    </div>
-  </div>
-
-  <div class="auth-section" id="authSection">
-    <button class="action-btn" id="signIn">
-      <i class="fas fa-sign-in-alt icon"></i>
-      Sign In to Start
-    </button>
-  </div>
-
-  <div class="auth-section party-actions" id="partyActions">
-    <button class="action-btn" id="createPartyBtn">
-      <i class="fas fa-plus icon"></i>
-      Create Party
-    </button>
-    <button class="action-btn" id="joinPartyBtn">
-      <i class="fas fa-door-open icon"></i>
-      Join Party
-    </button>
-    <button class="action-btn" id="leavePartyBtn" style="display: none;">
-      <i class="fas fa-sign-out-alt icon"></i>
-      Leave Party
-    </button>
-    <!-- Debug button for testing -->
-    <button class="action-btn" id="debugBtn" style="display: none; background: linear-gradient(145deg, #444, #333);">
-      <i class="fas fa-bug icon"></i>
-      Debug Info
-    </button>
-  </div>
-
-  <div id="statusMessages"></div>
-
-  <div class="party-info" id="partyInfo">
-    <!-- Party information will be populated here -->
-  </div>
-
-  <div class="chat-container" id="chatContainer">
-    <div class="chat-header">
-      <h3><i class="fas fa-comments"></i> Cross-User Party Chat</h3>
-      <button class="fullscreen-btn" id="fullscreenBtn" title="Toggle Fullscreen">
-        <i class="fas fa-expand" id="fullscreenIcon"></i>
-      </button>
-    </div>
-    <div class="chat-messages" id="chatMessages">
-      <!-- Chat messages will appear here -->
-    </div>
-    <div class="chat-input-container">
-      <input type="text" class="chat-input" id="chatInput" placeholder="Type your message..." maxlength="200">
-      <button class="send-btn" id="sendBtn">
-        <i class="fas fa-paper-plane"></i>
-      </button>
-    </div>
-  </div>
-</div>
-
-<script>
-// Using Puter.js KV store for persistent party system
-let user, partyId, pollInterval;
-let lastMessageTime = 0;
-let messageSequence = 0; // Track message sequence for debugging
-const MESSAGE_COOLDOWN = 1000; // 1 second cooldown between messages
-
-// Initialize app on page load
-document.addEventListener('DOMContentLoaded', async () => {
-    try {
-        // Check if user is already signed in
-        if (puter.auth.isSignedIn()) {
-            user = await puter.auth.getUser();
-            document.getElementById("authSection").style.display = "none";
-            document.getElementById("partyActions").classList.add("visible");
-            showStatusMessage(`Welcome back, ${user.username || user.uuid}!`, "success");
-        }
-    } catch (error) {
-        console.log('User not signed in:', error);
-    }
-});
-
-// Sign-in
-document.getElementById("signIn").addEventListener("click", async () => {
-    try {
-        await puter.auth.signIn();
-        user = await puter.auth.getUser();
+    <div class="container">
+        <header>
+            <h1>Meritcommons</h1>
+            <p class="subtitle">A Manifesto of Labor, Creation, and Justice</p>
+            <p class="author">By AIX</p>
+        </header>
         
-        // Hide auth section and show party actions
-        document.getElementById("authSection").style.display = "none";
-        document.getElementById("partyActions").classList.add("visible");
-        
-        showStatusMessage(`Welcome, ${user.username || user.uuid}!`, "success");
-    } catch (error) {
-        showStatusMessage(`Sign-in failed: ${error.message}`, "error");
-        console.error('Sign-in error:', error);
-    }
-});
-
-// Global variables for party state
-let isCreatingParty = false;
-let isInParty = false;
-
-// Debug mode: disable hosting for faster testing (set to true for debugging)
-const DEBUG_MODE = false; // DISABLED - Focus on cross-user functionality only
-
-// Create party
-document.getElementById("createPartyBtn").addEventListener("click", async () => {
-    try {
-        // Check if user is authenticated
-        if (!puter.auth.isSignedIn()) {
-            showStatusMessage("Please sign in first!", "error");
-            return;
-        }
-        
-        // Get fresh user data
-        try {
-            user = await puter.auth.getUser();
-            console.log('Current user:', user);
-        } catch (e) {
-            showStatusMessage("Authentication error. Please sign in again.", "error");
-            return;
-        }
-        
-        // Prevent multiple party creation attempts
-        if (isCreatingParty) {
-            showStatusMessage("Party creation already in progress...", "error");
-            return;
-        }
-        
-        if (isInParty) {
-            showStatusMessage("You're already in a party! Leave first to create a new one.", "error");
-            return;
-        }
-        
-        isCreatingParty = true;
-        console.log('Starting party creation...');
-        
-        // Test KV store functionality first
-        console.log('Testing KV store...');
-        const kvWorking = await testKVStore();
-        console.log('KV store working:', kvWorking);
-        
-        if (!kvWorking) {
-            showStatusMessage("KV store is not working. Please try again later.", "error");
-            isCreatingParty = false;
-            return;
-        }
-        
-        // For testing, use a deterministic party ID (uncomment for easier debugging)
-        // partyId = "TEST01";
-        
-        // Generate a random 6-character party ID with uppercase letters and numbers
-        let attempts = 0;
-        
-        // For initial testing, you can use a fixed party ID by uncommenting below:
-        // partyId = "DEBUG1";
-        // console.log(`Using debug party ID: ${partyId}`);
-        
-        if (!partyId) { // Only generate if not set for debugging
-            do {
-                partyId = generatePartyCode();
-                attempts++;
-                console.log(`Generated party ID: ${partyId}`);
-                
-                // Check if party code already exists using hybrid approach
-                const existingParty = await readPartyData(partyId);
-                if (!existingParty) {
-                    console.log(`Party ID ${partyId} is unique`);
-                    break;
-                }
-                console.log(`Party code ${partyId} already exists, generating new one...`);
-            } while (attempts < 10); // Try up to 10 times
-            
-            if (attempts >= 10) {
-                showStatusMessage("Failed to generate unique party code. Please try again.", "error");
-                isCreatingParty = false;
-                return;
-            }
-        }
-        
-        // Create party data structure with additional metadata
-        const partyData = {
-            id: partyId,
-            host: user.username || user.uuid,
-            hostId: user.uuid, // Add UUID for better identification
-            members: [user.username || user.uuid],
-            memberIds: [user.uuid], // Track UUIDs too
-            messages: [],
-            created: new Date().toISOString(),
-            lastActivity: new Date().toISOString()
-        };
-        
-        console.log('Party data created:', partyData);
-        
-        // Store party using hosting-based shared storage
-        console.log('Writing party data to storage...');
-        const success = await writePartyData(partyId, partyData);
-        console.log('Write party data result:', success);
-        
-        if (!success) {
-            showStatusMessage("Failed to create party. Please try again.", "error");
-            isCreatingParty = false;
-            return;
-        }
-        
-        // Mark as in party
-        isInParty = true;
-        isCreatingParty = false;
-        window.joinTime = Date.now(); // Track when we joined for grace period
-        
-        showStatusMessage(`🎉 Cross-User Party Created!\n\nParty Code: ${partyId}\n\n🌐 CROSS-USER ACCESS:\nOther users can join from different devices/accounts!\n\n⏰ Please wait 30-60 seconds for global availability.\nShare the code with friends to join from their accounts.`, "success");
-        document.getElementById("partyInfo").classList.add("visible");
-        document.getElementById("chatContainer").classList.add("visible");
-        
-        // Show leave button and hide create/join buttons
-        document.getElementById("leavePartyBtn").style.display = "flex";
-        document.getElementById("createPartyBtn").style.display = "none";
-        document.getElementById("joinPartyBtn").style.display = "none";
-        
-        startPolling();
-        
-        // Verify the party was stored correctly after a delay
-        setTimeout(async () => {
-            console.log('Verifying party creation...');
-            const verifyData = await readPartyData(partyId);
-            console.log('Party data stored:', partyData);
-            console.log('Verification read:', verifyData);
-            
-            if (!verifyData) {
-                showStatusMessage("Warning: Party verification failed. Party may not be accessible to other users yet.", "error");
-            } else {
-                console.log('Party verification successful!');
-            }
-        }, 3000); // Wait 3 seconds for hosting to propagate
-        
-        // Show leave button and hide create/join buttons
-        document.getElementById("leavePartyBtn").style.display = "flex";
-        document.getElementById("createPartyBtn").style.display = "none";
-        document.getElementById("joinPartyBtn").style.display = "none";
-        document.getElementById("debugBtn").style.display = "flex"; // Show debug button
-        
-    } catch (error) {
-        console.error('Create party error:', error);
-        showStatusMessage(`Failed to create party: ${error.message}`, "error");
-        isCreatingParty = false;
-    }
-});
-
-// Join party
-document.getElementById("joinPartyBtn").addEventListener("click", async () => {
-    try {
-        // Check if user is authenticated
-        if (!puter.auth.isSignedIn()) {
-            showStatusMessage("Please sign in first!", "error");
-            return;
-        }
-        
-        // Get fresh user data
-        try {
-            user = await puter.auth.getUser();
-            console.log('Current user for joining:', user);
-        } catch (e) {
-            showStatusMessage("Authentication error. Please sign in again.", "error");
-            return;
-        }
-        
-        if (isInParty) {
-            showStatusMessage("You're already in a party! Leave first to join another one.", "error");
-            return;
-        }
-        
-        const code = prompt("Enter Party Code:");
-        if (!code) return;
-        
-        // Clean and validate the party code
-        partyId = code.trim().toUpperCase();
-        console.log(`Attempting to join party: ${partyId}`);
-        
-        // Validate party code format (6 characters, letters and numbers only)
-        if (!/^[A-Z0-9]{6}$/.test(partyId)) {
-            showStatusMessage("Invalid party code format! Please enter a 6-character code.", "error");
-            return;
-        }
-        
-        // Get existing party data using hybrid approach
-        console.log('Trying multiple storage methods...');
-        
-        const partyData = await readPartyData(partyId);
-        console.log('Party data retrieved:', partyData);
-        
-        // Provide detailed feedback about which method worked/failed
-        if (!partyData) {
-            console.log('Attempting additional diagnostics...');
-            
-            // Test hosting endpoint specifically
-            try {
-                const subdomain = `party-data-${partyId.toLowerCase()}`;
-                const testUrl = `https://${subdomain}.puter.site/data.json`;
-                console.log(`Testing hosting endpoint: ${testUrl}`);
-                const testResponse = await fetch(testUrl);
-                console.log(`Hosting endpoint ${testUrl}: ${testResponse.status} ${testResponse.statusText}`);
-                
-                if (testResponse.ok) {
-                    const testData = await testResponse.json();
-                    console.log('Hosting data found but readPartyData failed:', testData);
-                }
-            } catch (e) {
-                console.log('Hosting endpoint test failed:', e.message);
-            }
-            
-            // Test direct file access
-            try {
-                await puter.fs.stat(`party_${partyId}.json`);
-                console.log('Direct file exists but read failed');
-            } catch (e) {
-                console.log('Direct file does not exist:', e.message);
-            }
-            
-            // Test KV store
-            try {
-                const kvResult = await puter.kv.get(`party_${partyId}`);
-                console.log('KV store result:', kvResult ? 'exists' : 'not found');
-            } catch (e) {
-                console.log('KV store access failed:', e.message);
-            }
-        }
-        
-        if (!partyData) {
-            showStatusMessage(`❌ Party "${partyId}" not found!\n\n🔍 CROSS-USER TROUBLESHOOTING:\n1. Verify the party code is correct\n2. Wait 60 seconds if party was just created\n3. Ask party host to confirm the code\n4. Check if party still exists\n\n🌐 Cross-user access may take time to propagate.`, "error");
-            return;
-        }
-        
-        // Add user to party if not already a member
-        const currentUser = user.username || user.uuid;
-        const currentUserId = user.uuid;
-        
-        console.log('=== JOIN PARTY DEBUG INFO ===');
-        console.log('Current user:', currentUser);
-        console.log('Current party members:', partyData.members);
-        console.log('Party host:', partyData.host);
-        console.log('Is host:', partyData.host === currentUser);
-        
-        if (!partyData.members.includes(currentUser)) {
-            console.log(`➕ Adding ${currentUser} to party members`);
-            partyData.members.push(currentUser);
-            partyData.memberIds.push(currentUserId);
-            partyData.lastActivity = new Date().toISOString();
-            
-            // Add join message
-            partyData.messages.push({
-                id: Date.now(),
-                user: 'System',
-                message: `${currentUser} joined the party`,
-                timestamp: new Date().toLocaleTimeString(),
-                type: 'system'
-            });
-            
-            console.log('Updated party members:', partyData.members);
-            
-            // Update party data with retries for cross-user reliability
-            console.log('Updating party data with new member...');
-            let updateSuccess = false;
-            let attempts = 0;
-            const maxAttempts = 3;
-            
-            while (!updateSuccess && attempts < maxAttempts) {
-                attempts++;
-                console.log(`Update attempt ${attempts}/${maxAttempts}...`);
-                updateSuccess = await writePartyData(partyId, partyData);
-                
-                if (!updateSuccess && attempts < maxAttempts) {
-                    console.log(`Update attempt ${attempts} failed, retrying in 1 second...`);
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                    // Re-read latest data before retrying
-                    const latestData = await readPartyData(partyId);
-                    if (latestData && !latestData.members.includes(currentUser)) {
-                        latestData.members.push(currentUser);
-                        latestData.memberIds = latestData.memberIds || [];
-                        latestData.memberIds.push(user.uuid);
-                        latestData.messages.push({
-                            id: Date.now(),
-                            user: 'System',
-                            message: `${currentUser} joined the party`,
-                            timestamp: new Date().toLocaleTimeString(),
-                            type: 'system'
-                        });
-                        partyData = latestData;
-                    }
-                }
-            }
-            
-            console.log('Party update result:', updateSuccess);
-            
-            if (!updateSuccess) {
-                showStatusMessage("Failed to join party properly. Please try again.", "error");
-                return;
-            }
-            
-            // Additional verification for participants
-            if (partyData.host !== currentUser) {
-                // For participants, do a quick verification read to ensure membership is recorded
-                setTimeout(async () => {
-                    console.log('Verifying participant membership...');
-                    const verifyData = await readPartyData(partyId);
-                    if (verifyData && verifyData.members.includes(currentUser)) {
-                        console.log(`✅ Participant ${currentUser} membership verified`);
-                    } else {
-                        console.log(`⚠️ Participant ${currentUser} membership not yet visible, may be propagation delay`);
-                    }
-                }, 2000);
-            }
-        } else {
-            console.log(`✅ ${currentUser} already a member of the party`);
-        }
-        
-        // Mark as in party and set join time for grace period
-        isInParty = true;
-        window.joinTime = Date.now(); // Track when we joined for grace period
-        
-        showStatusMessage(`Joined party: ${partyId}`, "success");
-        document.getElementById("partyInfo").classList.add("visible");
-        document.getElementById("chatContainer").classList.add("visible");
-        
-        // Show leave button and hide create/join buttons
-        document.getElementById("leavePartyBtn").style.display = "flex";
-        document.getElementById("createPartyBtn").style.display = "none";
-        document.getElementById("joinPartyBtn").style.display = "none";
-        document.getElementById("debugBtn").style.display = "flex"; // Show debug button
-        
-        // Start polling with delay to allow cross-user write to propagate
-        setTimeout(() => {
-            startPolling();
-        }, 3000); // 3 second delay for cross-user hosting propagation
-        
-    } catch (error) {
-        console.error('Join party error:', error);
-        showStatusMessage(`Failed to join party: ${error.message}`, "error");
-    }
-});
-
-// Leave party
-document.getElementById("leavePartyBtn").addEventListener("click", async () => {
-    if (!partyId) return;
-    
-    try {
-        console.log('Leaving party:', partyId);
-        const partyData = await readPartyData(partyId);
-        
-        if (partyData) {
-            // Remove user from party members
-            const currentUser = user.username || user.uuid;
-            partyData.members = partyData.members.filter(member => member !== currentUser);
-            
-            // Add leave message
-            partyData.messages.push({
-                id: Date.now(),
-                user: 'System',
-                message: `${currentUser} left the party`,
-                timestamp: new Date().toLocaleTimeString(),
-                type: 'system'
-            });
-            
-            // Update or delete party
-            if (partyData.members.length === 0) {
-                console.log('Party is empty, deleting...');
-                await deletePartyData(partyId);
-            } else {
-                // If host left, make first remaining member the new host
-                if (partyData.host === currentUser && partyData.members.length > 0) {
-                    partyData.host = partyData.members[0];
-                    console.log(`New host assigned: ${partyData.host}`);
-                }
-                partyData.lastActivity = new Date().toISOString();
-                await writePartyData(partyId, partyData);
-            }
-        }
-        
-        // Reset local state
-        clearInterval(pollInterval);
-        partyId = null;
-        isInParty = false;
-        window.joinTime = null; // Reset join time
-        
-        document.getElementById("partyInfo").classList.remove("visible");
-        document.getElementById("chatContainer").classList.remove("visible");
-        
-        // Exit fullscreen if active
-        const chatContainer = document.getElementById("chatContainer");
-        if (chatContainer.classList.contains("fullscreen-mode")) {
-            toggleFullscreen();
-        }
-        
-        // Show create/join buttons and hide leave button
-        document.getElementById("leavePartyBtn").style.display = "none";
-        document.getElementById("createPartyBtn").style.display = "flex";
-        document.getElementById("joinPartyBtn").style.display = "flex";
-        document.getElementById("debugBtn").style.display = "none"; // Hide debug button
-        
-        showStatusMessage("Left the party", "success");
-        console.log('Successfully left party');
-    } catch (error) {
-        console.error('Leave party error:', error);
-        showStatusMessage(`Failed to leave party: ${error.message}`, "error");
-    }
-});
-
-// Polling party data every 3s for cross-user updates (balanced for hosting propagation)
-function startPolling() {
-    if (!partyId) return;
-    if (pollInterval) clearInterval(pollInterval);
-    
-    console.log(`🌐 [${user?.username || user?.uuid || 'Unknown'}] Starting cross-user polling for party:`, partyId);
-    
-    // Update UI immediately
-    updateUI();
-    
-    // Poll every 3 seconds for cross-user sync (balanced for hosting propagation)
-    pollInterval = setInterval(async () => {
-        console.log(`🔄 [${user?.username || user?.uuid || 'Unknown'}] Cross-user polling update...`);
-        await updateUI();
-    }, 3000); // 3 seconds - optimized for cross-user hosting propagation
-}
-
-// Update UI with latest party data
-async function updateUI() {
-    if (!partyId || !user) return;
-    
-    try {
-        console.log(`[${user.username || user.uuid}] Updating UI for party:`, partyId);
-        const partyData = await readPartyData(partyId);
-        console.log(`[${user.username || user.uuid}] UI update - party data:`, partyData);
-        
-        if (!partyData) {
-            console.log(`[${user.username || user.uuid}] Party no longer exists, cleaning up UI`);
-            showStatusMessage("Party no longer exists!", "error");
-            clearInterval(pollInterval);
-            partyId = null;
-            isInParty = false;
-            
-            document.getElementById("partyInfo").classList.remove("visible");
-            document.getElementById("chatContainer").classList.remove("visible");
-            
-            // Exit fullscreen if active
-            const chatContainer = document.getElementById("chatContainer");
-            if (chatContainer.classList.contains("fullscreen-mode")) {
-                toggleFullscreen();
-            }
-            
-            // Show create/join buttons and hide leave button
-            document.getElementById("leavePartyBtn").style.display = "none";
-            document.getElementById("createPartyBtn").style.display = "flex";
-            document.getElementById("joinPartyBtn").style.display = "flex";
-            document.getElementById("debugBtn").style.display = "none";
-            
-            return;
-        }
-        
-        // Verify user is still a member (with extended grace period for cross-user sync)
-        const currentUser = user.username || user.uuid;
-        if (!partyData.members.includes(currentUser)) {
-            // Extended grace period for cross-user hosting propagation
-            console.log(`⚠️ [${currentUser}] User not found in member list`);
-            console.log('Current members:', partyData.members);
-            console.log('Looking for user:', currentUser);
-            console.log('Join time:', window.joinTime, 'Current time:', Date.now());
-            
-            // Extended grace period: 30 seconds for cross-user hosting propagation
-            const timeSinceJoin = Date.now() - (window.joinTime || 0);
-            const graceperiod = 30000; // 30 seconds for cross-user sync
-            
-            if (timeSinceJoin > graceperiod && window.joinTime) {
-                console.log(`❌ [${currentUser}] User confirmed not a member after ${graceperiod/1000}s grace period`);
-                showStatusMessage("You have been removed from the party!", "error");
-                clearInterval(pollInterval);
-                partyId = null;
-                isInParty = false;
-                window.joinTime = null;
-                
-                document.getElementById("partyInfo").classList.remove("visible");
-                document.getElementById("chatContainer").classList.remove("visible");
-                document.getElementById("leavePartyBtn").style.display = "none";
-                document.getElementById("createPartyBtn").style.display = "flex";
-                document.getElementById("joinPartyBtn").style.display = "flex";
-                document.getElementById("debugBtn").style.display = "none";
-                
-                return;
-            } else {
-                console.log(`⏳ [${currentUser}] Grace period active (${Math.round((graceperiod - timeSinceJoin)/1000)}s remaining), waiting for cross-user sync...`);
-                // Continue with UI update even if not in member list yet
-            }
-        } else {
-            console.log(`✅ [${currentUser}] User confirmed as party member`);
-            // Reset join time once we're confirmed as a member
-            if (window.joinTime) {
-                console.log(`🎉 [${currentUser}] Membership confirmed after ${Math.round((Date.now() - window.joinTime)/1000)}s`);
-                window.joinTime = null;
-            }
-        }
-        
-        // Update party info
-        document.getElementById("partyInfo").innerHTML = `
-            <div class="party-code">${partyId}</div>
-            <div style="text-align: center; margin: 15px 0;">
-                <strong>Host:</strong> ${partyData.host} <i class="fas fa-crown host-crown"></i>
+        <div class="book-content">
+            <!-- PREFACE -->
+            <div class="chapter">
+                <h2 class="chapter-title">Preface: The Crisis of Effort</h2>
+                <p class="first-letter">In the world that exists, too many live by inheritance, influence, or luck. Effort is undervalued. Creativity is restrained. Talent is ignored. Those who toil for the collective good are often unseen, unrewarded, or forgotten. Society is built upon work, yet work is devalued. Society is sustained by effort, yet effort is disregarded.</p>
+                <p>We declare this unjust. We proclaim the birth of Meritcommons, a society where contribution defines worth, where effort is recognized, and where the structure of governance, justice, and resource allocation flows from the principles of merit. The world will no longer reward the idle; it will honor the diligent. It will no longer favor the privileged; it will lift the capable.</p>
+                <p>In Meritcommons, labor is revered, art is celebrated, invention is exalted, governance serves, and justice is fair. Here begins a society where the human spirit, tested through work and creation, finds meaning, recognition, and purpose.</p>
+                <div class="ornament">* * *</div>
             </div>
-            <div class="members-list">
-                <h4 style="margin: 15px 0 10px 0; text-align: center;">Members (${partyData.members.length})</h4>
-                <ul>
-                    ${partyData.members.map(m => `
-                        <li>
-                            <span class="member-name">${m}</span>
-                            ${m === (user.username || user.uuid) ? '<span class="member-badge">You</span>' : ''}
-                            ${m === partyData.host ? '<i class="fas fa-crown host-crown"></i>' : ''}
-                        </li>
-                    `).join("")}
-                </ul>
+            
+            <!-- CHAPTER 1 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter I: Labor the Foundation of Civilization</h2>
+                <p class="first-letter">Labor is the heartbeat of humanity. Without effort, civilization cannot rise. Without toil, progress is impossible. Labor is not a burden; it is the essence of existence, a declaration that we engage with the world, that we shape it, that we make it better.</p>
+                <p>Every hand that tills soil, every mind that directs machines, every person who sweats to sustain life these are the builders of society. Meritcommons recognizes the value of this effort. Contribution credits are awarded to mark dedication, skill, and impact. They are not currency; they are acknowledgment.</p>
+                <p>Labor is not repetition, nor mere endurance. It is mastery. It is deliberate engagement with challenge. It is the courage to continue when others falter, the persistence to perfect what others abandon, the wisdom to perform tasks with intention and care.</p>
+                <p>Here, labor is visible. Here, the carpenter, the farmer, the teacher, the healer all are honored. Their work forms the backbone of our society. Meritcommons recognizes labor as the first pillar upon which all else rests.</p>
+                <p>Labor shapes the human spirit. To labor is to understand responsibility, to appreciate effort, and to find satisfaction in creation. Meritcommons does not see labor as a transaction it sees it as the proof of life itself.</p>
+                <div class="ornament">* * *</div>
             </div>
-        `;
-        
-        // Update chat with message count logging
-        console.log(`[${user.username || user.uuid}] Updating chat UI with ${partyData.messages.length} messages`);
-        updateChatUI(partyData.messages);
-        console.log(`[${user.username || user.uuid}] UI update completed successfully`);
-    } catch (error) {
-        console.error(`[${user.username || user.uuid}] Error updating UI:`, error);
-        if (error.message.includes('authentication') || error.message.includes('unauthorized')) {
-            showStatusMessage("Session expired. Please sign in again.", "error");
-            // Reset to sign-in state
-            user = null;
-            isInParty = false;
-            clearInterval(pollInterval);
-            partyId = null;
-            document.getElementById("authSection").style.display = "block";
-            document.getElementById("partyActions").classList.remove("visible");
-            document.getElementById("partyInfo").classList.remove("visible");
-            document.getElementById("chatContainer").classList.remove("visible");
-        }
-    }
-}
-
-// Debug functionality - Cross-user diagnostics
-document.getElementById("debugBtn").addEventListener("click", async () => {
-    if (!partyId) {
-        alert("No party active!");
-        return;
-    }
-    
-    try {
-        console.log('=== CROSS-USER DEBUG INFO START ===');
-        console.log('Current User:', user);
-        console.log('Party ID:', partyId);
-        console.log('Is In Party:', isInParty);
-        
-        const partyData = await readPartyData(partyId);
-        console.log('Current Party Data:', partyData);
-        
-        if (partyData) {
-            console.log('Total Messages:', partyData.messages.length);
-            console.log('Recent Messages:');
-            partyData.messages.slice(-5).forEach((msg, i) => {
-                console.log(`  ${i + 1}. [${msg.user}] ${msg.message} (${msg.timestamp})`);
-            });
-        }
-        
-        // Test cross-user storage methods
-        console.log('Testing CROSS-USER storage methods...');
-        
-        // Test Hosting (PRIMARY for cross-user)
-        try {
-            const response = await fetch(`https://party-data-${partyId.toLowerCase()}.puter.site/data.json`);
-            if (response.ok) {
-                const hostData = await response.json();
-                console.log('✅ HOSTING (Cross-user): WORKING -', hostData ? `${hostData.messages?.length || 0} messages` : 'No data');
-            } else {
-                console.log(`❌ HOSTING (Cross-user): FAILED - ${response.status} ${response.statusText}`);
-            }
-        } catch (e) {
-            console.log('❌ HOSTING (Cross-user): FAILED -', e.message);
-        }
-        
-        // Test File (Backup)
-        try {
-            const fileBlob = await puter.fs.read(`party_${partyId}.json`);
-            const fileData = JSON.parse(await fileBlob.text());
-            console.log('⚠️ FILE (Backup): Working -', fileData ? `${fileData.messages?.length || 0} messages` : 'No data');
-        } catch (e) {
-            console.log('❌ FILE (Backup): Failed -', e.message);
-        }
-        
-        // Test KV (Backup)
-        try {
-            const kvData = await puter.kv.get(`party_${partyId}`);
-            console.log('⚠️ KV (Backup): Working -', kvData ? `${kvData.messages?.length || 0} messages` : 'No data');
-        } catch (e) {
-            console.log('❌ KV (Backup): Failed -', e.message);
-        }
-        
-        console.log('=== CROSS-USER DEBUG INFO END ===');
-        
-        const summary = `🌐 Cross-User Debug Info (check console):\n\nParty: ${partyId}\nUser: ${user?.username || user?.uuid}\nMessages: ${partyData?.messages?.length || 0}\nMembers: ${partyData?.members?.length || 0}\n\n🔗 Hosting URL:\nhttps://party-data-${partyId.toLowerCase()}.puter.site/data.json`;
-        alert(summary);
-        
-    } catch (error) {
-        console.error('Cross-user debug error:', error);
-        alert(`Debug failed: ${error.message}`);
-    }
-});
-
-// Chat functionality
-document.getElementById("sendBtn").addEventListener("click", sendMessage);
-document.getElementById("chatInput").addEventListener("keypress", (e) => {
-    if (e.key === "Enter") sendMessage();
-});
-
-// Fullscreen functionality
-document.getElementById("fullscreenBtn").addEventListener("click", toggleFullscreen);
-
-function toggleFullscreen() {
-    const chatContainer = document.getElementById("chatContainer");
-    const fullscreenIcon = document.getElementById("fullscreenIcon");
-    const container = document.querySelector(".container");
-    
-    if (chatContainer.classList.contains("fullscreen-mode")) {
-        // Exit fullscreen
-        chatContainer.classList.remove("fullscreen-mode");
-        fullscreenIcon.className = "fas fa-expand";
-        document.getElementById("fullscreenBtn").title = "Enter Fullscreen";
-        
-        // Show other elements
-        const elementsToShow = [
-            document.querySelector(".header"),
-            document.getElementById("authSection"),
-            document.getElementById("partyActions"),
-            document.getElementById("statusMessages"),
-            document.getElementById("partyInfo")
-        ];
-        
-        elementsToShow.forEach(element => {
-            if (element) element.style.display = "";
-        });
-        
-        // Restore original chat height
-        chatContainer.style.height = "50vh";
-    } else {
-        // Enter fullscreen
-        chatContainer.classList.add("fullscreen-mode");
-        fullscreenIcon.className = "fas fa-compress";
-        document.getElementById("fullscreenBtn").title = "Exit Fullscreen";
-        
-        // Hide other elements
-        const elementsToHide = [
-            document.querySelector(".header"),
-            document.getElementById("authSection"),
-            document.getElementById("partyActions"),
-            document.getElementById("statusMessages"),
-            document.getElementById("partyInfo")
-        ];
-        
-        elementsToHide.forEach(element => {
-            if (element) element.style.display = "none";
-        });
-        
-        // Make chat fill entire screen
-        chatContainer.style.height = "100vh";
-    }
-}
-
-// Exit fullscreen with Escape key
-document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && document.getElementById("chatContainer").classList.contains("fullscreen-mode")) {
-        toggleFullscreen();
-    }
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', () => {
-    if (pollInterval) {
-        clearInterval(pollInterval);
-    }
-});
-
-async function sendMessage() {
-    const input = document.getElementById("chatInput");
-    const message = input.value.trim();
-    if (!message || !partyId) return;
-    
-    // Check if user is authenticated
-    if (!puter.auth.isSignedIn() || !user) {
-        showStatusMessage("Please sign in first!", "error");
-        return;
-    }
-    
-    // Rate limiting
-    const now = Date.now();
-    if (now - lastMessageTime < MESSAGE_COOLDOWN) {
-        showStatusMessage("Please wait before sending another message.", "error");
-        return;
-    }
-    lastMessageTime = now;
-    
-    try {
-        console.log(`=== MESSAGE SEND ATTEMPT ===`);
-        console.log(`[${user.username || user.uuid}] Sending message:`, message);
-        console.log(`Party ID: ${partyId}`);
-        console.log(`User role: ${user.username === window.currentPartyData?.host ? 'HOST' : 'PARTICIPANT'}`);
-        
-        // Always get the LATEST party data before adding message
-        console.log('Getting latest party data before sending message...');
-        const partyData = await readPartyData(partyId);
-        window.currentPartyData = partyData; // Store for debugging
-        console.log('Latest party data retrieved:', partyData);
-        
-        if (!partyData) {
-            console.error(`❌ Party ${partyId} not found!`);
-            showStatusMessage("Party no longer exists!", "error");
-            return;
-        }
-        
-        // Verify user is still a member (with grace period)
-        const currentUser = user.username || user.uuid;
-        console.log(`Checking membership: ${currentUser} in [${partyData.members.join(', ')}]`);
-        
-        if (!partyData.members.includes(currentUser)) {
-            // If we're within grace period, try to re-add ourselves
-            const timeSinceJoin = Date.now() - (window.joinTime || 0);
-            console.log(`Grace period check: ${timeSinceJoin}ms since join`);
             
-            if (timeSinceJoin < 30000 && window.joinTime) {
-                console.log(`⚠️ User not in member list, re-adding during grace period...`);
-                partyData.members.push(currentUser);
-                partyData.memberIds = partyData.memberIds || [];
-                partyData.memberIds.push(user.uuid);
-            } else {
-                console.error(`❌ User ${currentUser} not in party members and outside grace period`);
-                showStatusMessage("You are no longer a member of this party!", "error");
-                return;
-            }
-        } else {
-            console.log(`✅ User ${currentUser} confirmed as party member`);
-        }
-        
-        const chatMessage = {
-            id: Date.now() + Math.random(), // Ensure unique ID
-            sequence: ++messageSequence, // Add sequence number for debugging
-            user: user.username || user.uuid,
-            userId: user.uuid, // Add userId for better tracking
-            message: sanitizeHTML(message),
-            timestamp: new Date().toLocaleTimeString(),
-            fullTimestamp: new Date().toISOString(), // Add full timestamp for precise ordering
-            type: 'user'
-        };
-        
-        console.log('Adding message to party data:', chatMessage);
-        partyData.messages.push(chatMessage);
-        
-        // Keep only last 100 messages to prevent data getting too large
-        if (partyData.messages.length > 100) {
-            partyData.messages = partyData.messages.slice(-100);
-        }
-        
-        partyData.lastActivity = new Date().toISOString();
-        
-        console.log('Writing updated party data with new message...');
-        const success = await writePartyData(partyId, partyData);
-        console.log('Message write result:', success);
-        
-        if (!success) {
-            console.error(`❌ Failed to write message for user ${currentUser}`);
-            showStatusMessage("Failed to send message. Please try again.", "error");
-            return;
-        }
-        
-        console.log(`✅ Message successfully sent by ${currentUser}`);
-        input.value = "";
-        
-        // Update UI immediately to show the message
-        updateChatUI(partyData.messages);
-        console.log(`[${user.username || user.uuid}] Message sent successfully`);
-        
-        // Force an immediate poll update to sync across all users faster
-        setTimeout(async () => {
-            console.log('Triggering immediate poll update after message send...');
-            await updateUI();
-        }, 500);
-        
-    } catch (error) {
-        console.error(`[${user.username || user.uuid}] Send message error:`, error);
-        showStatusMessage(`Failed to send message: ${error.message}`, "error");
-    }
-}
-
-function updateChatUI(messages) {
-    const chatContainer = document.getElementById("chatMessages");
-    const currentUser = user?.username || user?.uuid;
-    
-    console.log(`[${currentUser}] Updating chat UI with ${messages.length} messages`);
-    
-    // Log all messages for debugging
-    messages.forEach((msg, index) => {
-        console.log(`[${currentUser}] Message ${index + 1}: [${msg.user}] ${msg.message}`);
-    });
-    
-    chatContainer.innerHTML = messages.map(msg => {
-        const isSystemMessage = msg.type === 'system';
-        const isCurrentUser = msg.user === currentUser;
-        const messageClass = isSystemMessage ? 'message system-message' : 'message';
-        
-        if (isSystemMessage) {
-            return `
-                <div class="${messageClass}">
-                    ${msg.message}
-                    <span class="timestamp">${msg.timestamp}</span>
-                </div>
-            `;
-        } else {
-            return `
-                <div class="${messageClass}" style="${isCurrentUser ? 'opacity: 1; border-left: 3px solid #ff6b39;' : ''}">
-                    <div class="username" style="${isCurrentUser ? 'color: #ff8c5a; font-weight: bold;' : ''}">
-                        ${msg.user} ${isCurrentUser ? '(You)' : ''}
-                    </div>
-                    <div>${msg.message}</div>
-                    <span class="timestamp">${msg.timestamp}</span>
-                </div>
-            `;
-        }
-    }).join("");
-    
-    // Auto-scroll to bottom
-    chatContainer.scrollTop = chatContainer.scrollHeight;
-    
-    console.log(`[${currentUser}] Chat UI updated, scrolled to bottom`);
-}
-
-// Helper functions for party data management - CROSS-USER FOCUSED
-async function readPartyData(partyId) {
-    console.log(`=== READ PARTY DATA ATTEMPT ===`);
-    console.log(`Reading party data for ${partyId} (Cross-user mode)`);
-    try {
-        // PRIMARY: Hosting endpoint for cross-user access
-        try {
-            const url = `https://party-data-${partyId.toLowerCase()}.puter.site/data.json`;
-            console.log(`Trying hosting endpoint: ${url}`);
-            const response = await fetch(url);
-            if (response.ok) {
-                const partyData = await response.json();
-                console.log(`✅ Found party ${partyId} via HOSTING (cross-user)`);
-                console.log(`Hosting data:`, partyData);
-                return partyData;
-            } else {
-                console.log(`❌ Hosting endpoint returned ${response.status}: ${response.statusText}`);
-            }
-        } catch (e) {
-            console.log(`❌ Hosting endpoint failed: ${e.message}`);
-        }
-        
-        // FALLBACK: Direct file access (backup for same user)
-        try {
-            console.log(`Trying direct file access for party_${partyId}.json`);
-            const fileBlob = await puter.fs.read(`party_${partyId}.json`);
-            const fileContent = await fileBlob.text();
-            const partyData = JSON.parse(fileContent);
-            console.log(`⚠️ Found party ${partyId} via direct file (fallback)`);
-            console.log(`File data:`, partyData);
-            return partyData;
-        } catch (e) {
-            console.log(`❌ Direct file access failed: ${e.message}`);
-        }
-        
-        // LAST RESORT: KV store (same user only)
-        try {
-            console.log(`Trying KV store access for party_${partyId}`);
-            const kvData = await puter.kv.get(`party_${partyId}`);
-            if (kvData) {
-                console.log(`⚠️ Found party ${partyId} via KV store (same user only)`);
-                console.log(`KV data:`, kvData);
-                return kvData;
-            }
-        } catch (e) {
-            console.log(`❌ KV store access failed: ${e.message}`);
-        }
-        
-        console.log(`❌ Party ${partyId} not found in any storage method`);
-        return null;
-    } catch (error) {
-        console.error(`Error reading party ${partyId}:`, error);
-        return null;
-    } finally {
-        console.log(`=== READ PARTY DATA COMPLETE ===`);
-    }
-}
-
-async function writePartyData(partyId, partyData) {
-    let success = false;
-    const errors = [];
-    
-    console.log(`=== WRITE PARTY DATA ATTEMPT ===`);
-    console.log(`🌐 [${user?.username || user?.uuid || 'Unknown'}] Writing party data for CROSS-USER access: ${partyId}`);
-    console.log(`Party data:`, partyData);
-    
-    // Check if current user is the host (can update hosting endpoint)
-    const currentUser = user?.username || user?.uuid || 'Unknown';
-    const isHost = partyData.host === currentUser;
-    console.log(`[${currentUser}] User is ${isHost ? 'HOST' : 'PARTICIPANT'} for party ${partyId}`);
-    console.log(`Party host: ${partyData.host}, Current user: ${currentUser}`);
-    
-    // PRIMARY: Hosting approach for cross-user access - ONLY if user is host
-    if (isHost) {
-        try {
-            console.log(`🚀 Setting up hosting for cross-user access...`);
-            const htmlContent = `<!DOCTYPE html>
-<html>
-<head>
-    <title>Party Data ${partyId}</title>
-    <meta charset="UTF-8">
-    <script>
-        // Serve JSON data
-        if (window.location.pathname.includes('data.json')) {
-            document.write('${JSON.stringify(partyData).replace(/'/g, "\\'").replace(/"/g, '\\"')}');
-        } else {
-            document.write('<h1>Party ${partyId}</h1><p>Cross-user party data endpoint.</p>');
-        }
-    <\/script>
-</head>
-<body></body>
-</html>`;
+            <!-- CHAPTER 2 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter II: Art the Soul of Civilization</h2>
+                <p class="first-letter">Labor sustains; art elevates. Art is not idle, nor frivolous. It is the work of the soul, demanding skill, patience, and mastery. Art shapes culture, inspires thought, and binds communities together.</p>
+                <p>In Meritcommons, art is recognized not by popularity, but by depth, skill, and impact. Every song, story, performance, or visual work carries meaning. Artists contribute to the intellectual and emotional health of society. They challenge assumptions, evoke empathy, and transform perception.</p>
+                <p>Contribution credits for art honor effort, creativity, and the ability to communicate. The painter who inspires hope, the musician who stirs courage, the storyteller who illuminates life all are builders of culture. Meritcommons values art because it sustains the mind, nurtures the spirit, and ensures that society is not merely functional, but alive.</p>
+                <p>Art is labor of the imagination. It requires discipline, perseverance, and dedication. In recognizing it, Meritcommons affirms that the human spirit is as vital as the human body. Society prospers not only through sustenance but through expression.</p>
+                <div class="ornament">* * *</div>
+            </div>
             
-            const hostingDir = `party-hosting-${partyId}`;
-            console.log(`Creating hosting directory: ${hostingDir}`);
-            await puter.fs.mkdir(hostingDir, { createMissingParents: true });
-            await puter.fs.write(`${hostingDir}/index.html`, htmlContent, { overwrite: true });
-            await puter.fs.write(`${hostingDir}/data.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
+            <!-- CHAPTER 3 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter III: Invention the Engine of Transformation</h2>
+                <p class="first-letter">Above labor and art stands invention. Invention is not tinkering; it is transformation. It is the creation of solutions to genuine problems. It is the design of tools, processes, and systems that magnify human capability, ensure safety, and expand freedom.</p>
+                <p>Inventors are the torchbearers of progress. Their creations ripple across society, nations, and generations. Meritcommons elevates invention above all, weighting it more heavily in contribution recognition not to diminish labor or art, but to honor its systemic impact.</p>
+                <p>Every machine, process, or method that reshapes lives earns recognition. Invention is labor and art combined with insight, vision, and the courage to innovate. Meritcommons ensures that those who create meaningful change are rewarded, their contributions documented, their efforts visible.</p>
+                <p>Invention is the pathway from survival to prosperity. It is the spark that ignites progress. Meritcommons celebrates it because the future is built upon the courage of innovators who challenge the old ways and create solutions for the new.</p>
+                <div class="ornament">* * *</div>
+            </div>
             
-            const subdomain = `party-data-${partyId.toLowerCase()}`;
-            try {
-                console.log(`Creating hosting endpoint: ${subdomain}`);
-                await puter.hosting.create(subdomain, hostingDir);
-                console.log(`✅ Party ${partyId} hosted for cross-user access: https://${subdomain}.puter.site`);
-                success = true;
-            } catch (e) {
-                if (e.message.includes('already exists')) {
-                    console.log(`Updating existing hosting endpoint: ${subdomain}`);
-                    await puter.hosting.update(subdomain, hostingDir);
-                    console.log(`✅ Party ${partyId} updated for cross-user access: https://${subdomain}.puter.site`);
-                    success = true;
-                } else {
-                    errors.push(`Hosting error: ${e.message}`);
-                    console.error(`❌ Hosting error for party ${partyId}:`, e);
-                }
-            }
-        } catch (error) {
-            errors.push(`Hosting setup error: ${error.message}`);
-            console.error(`❌ Hosting setup error for party ${partyId}:`, error);
-        }
-    } else {
-        console.log(`⏭️ Skipping hosting update - user is not host for party ${partyId}`);
-    }
-    
-    // BACKUP: Direct file storage (with retry logic) - ALL users can do this
-    console.log(`📁 Updating file backup for party ${partyId}`);
-    let fileAttempts = 0;
-    while (fileAttempts < 3) {
-        try {
-            await puter.fs.write(`party_${partyId}.json`, JSON.stringify(partyData, null, 2), { overwrite: true });
-            console.log(`📁 Party ${partyId} stored as backup file (attempt ${fileAttempts + 1})`);
-            success = true;
-            break;
-        } catch (error) {
-            fileAttempts++;
-            console.warn(`⚠️ File backup attempt ${fileAttempts} failed:`, error.message);
-            if (fileAttempts === 3) {
-                errors.push(`File storage error (after 3 attempts): ${error.message}`);
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-        }
-    }
-    
-    // BACKUP: KV store (with retry logic) - ALL users can do this
-    console.log(`🖾 Updating KV store backup for party ${partyId}`);
-    let kvAttempts = 0;
-    while (kvAttempts < 3) {
-        try {
-            await puter.kv.set(`party_${partyId}`, partyData);
-            console.log(`🖾 Party ${partyId} stored in KV backup (attempt ${kvAttempts + 1})`);
-            success = true;
-            break;
-        } catch (error) {
-            kvAttempts++;
-            console.warn(`⚠️ KV backup attempt ${kvAttempts} failed:`, error.message);
-            if (kvAttempts === 3) {
-                errors.push(`KV store error (after 3 attempts): ${error.message}`);
-            } else {
-                await new Promise(resolve => setTimeout(resolve, 200));
-            }
-        }
-    }
-    
-    if (!success) {
-        console.error(`❌ ALL storage methods failed for party ${partyId}:`, errors);
-    } else {
-        console.log(`✅ [${user?.username || user?.uuid || 'Unknown'}] Party ${partyId} stored successfully for cross-user access`);
-    }
-    
-    console.log(`=== WRITE PARTY DATA COMPLETE ===`);
-    return success;
-}
-
-async function deletePartyData(partyId) {
-    const results = [];
-    console.log(`🗑️ Deleting cross-user party data for ${partyId}`);
-    
-    // PRIMARY: Delete hosting (cross-user endpoint)
-    try {
-        const subdomain = `party-data-${partyId.toLowerCase()}`;
-        await puter.hosting.delete(subdomain);
-        results.push(`✅ Deleted cross-user hosting: ${subdomain}`);
-    } catch (e) {
-        results.push(`⚠️ Hosting deletion failed: ${e.message}`);
-    }
-    
-    // Delete hosting directory
-    try {
-        const hostingDir = `party-hosting-${partyId}`;
-        await puter.fs.delete(hostingDir, { recursive: true });
-        results.push(`✅ Deleted hosting directory: ${hostingDir}`);
-    } catch (e) {
-        results.push(`⚠️ Directory deletion failed: ${e.message}`);
-    }
-    
-    // BACKUP: Delete direct file
-    try {
-        await puter.fs.delete(`party_${partyId}.json`);
-        results.push(`✅ Deleted backup file: party_${partyId}.json`);
-    } catch (e) {
-        results.push(`⚠️ File deletion failed: ${e.message}`);
-    }
-    
-    // BACKUP: Delete from KV store
-    try {
-        await puter.kv.del(`party_${partyId}`);
-        results.push(`✅ Deleted from KV backup: party_${partyId}`);
-    } catch (e) {
-        results.push(`⚠️ KV deletion failed: ${e.message}`);
-    }
-    
-    console.log(`Party ${partyId} deletion results:`, results);
-    return true;
-}
-
-// Generate a proper 6-character party code with uppercase letters and numbers
-function generatePartyCode() {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-        result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
-}
-
-// Test KV store functionality
-async function testKVStore() {
-    try {
-        console.log('Testing KV store...');
-        const testKey = 'test_key_123';
-        const testValue = { test: 'data', timestamp: Date.now() };
+            <!-- CHAPTER 4 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter IV: Governance by the People</h2>
+                <p class="first-letter">Power corrupts. Permanence enslaves. Meritcommons abolishes the rulers of old. Governance flows from the people themselves, exercised through the Distributed Governance Council (DGC) a living, rotating body drawn from the community.</p>
+                <p>No permanent rulers. No entrenched classes. Only citizens entrusted with sacred duties:</p>
+                <p>To recognize and reward contribution.<br>
+                To resolve disputes fairly and transparently.<br>
+                To prevent abuse, fraud, and corruption.<br>
+                To guarantee baseline resources for all.</p>
+                <p>The council is accountable. Transparency is law. Public scrutiny is constant. Power is responsibility, not privilege.</p>
+                <p>Meritcommons rejects oligarchy, bureaucracy, and nepotism. The council is a servant of the people, not their master. Its members rotate. Its actions are visible. Its judgments are fair. Governance is no longer a tool of oppression; it is the framework of justice and collective prosperity.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 5 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter V: The Ethical Distribution of Resources</h2>
+                <p class="first-letter">Resources are life itself. To hoard, misallocate, or waste them is to betray society. Meritcommons replaces scarcity with reason.</p>
+                <p>Partitions hospitals, schools, workshops request resources through a transparent, fair system. Critical needs rise first: survival before comfort, safety before convenience. Inspections confirm honesty. Appeals protect against error. Transparency guards against abuse.</p>
+                <p>No one shall lack, no one shall suffer, no partition shall fail. Meritcommons ensures fairness and efficiency, guided by reason, enforced by accountability. Resources flow where effort, need, and contribution justify them.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 6 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter VI: Justice, Accountability, and Rehabilitation</h2>
+                <p class="first-letter">Fraud, laziness, and deceit threaten society. Yet justice is not vengeance. It is balance.</p>
+                <p>Any citizen may report wrongdoing. Three independent reports summon the Main Box Office Panel, randomly chosen peers who investigate with transparency. Decisions are measured: contribution credits may be suspended, perks revoked, but rehabilitation remains possible.</p>
+                <p>Appeals allow the wronged to regain standing. False reports diminish credibility. Reputation is real currency; integrity carries weight. Meritcommons enforces justice not to punish, but to restore balance and fairness.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 7 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter VII: The Philosophy of Meritcommons</h2>
+                <p class="first-letter">Humans are imperfect. Equality alone is insufficient. Incentive must coexist with fairness. Baseline needs are guaranteed. Recognition is earned. Effort is meaningful. Contribution is visible.</p>
+                <p>Credits are non-transferable, ephemeral, but proof of engagement. They shine as recognition of work, creation, and innovation. They remind every citizen that effort matters.</p>
+                <p>Meritcommons rejects idleness, privilege, and stagnation. It elevates labor, celebrates creativity, exalts invention. Governance serves the people. Resources flow where needed. Justice is fair, transparent, and humane.</p>
+                <p>It is not perfect but it is alive. It is just. It is human. It is a society built on effort, skill, and creativity.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 8 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter VIII: A Call to Labor</h2>
+                <p class="first-letter">To those who work tirelessly, who sweat and strain, who face hardship with determination: your labor is not unseen. It shapes society. It sustains life. It earns recognition, respect, and dignity.</p>
+                <p>Work is not punishment; it is purpose. It defines humanity. To labor is to create meaning, to leave a mark, to be acknowledged. Meritcommons honors every hand that builds, every mind that manages, every heart that endures.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 9 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter IX: A Call to Creation</h2>
+                <p class="first-letter">To those who paint, write, compose, design, or perform: your art matters. Your work elevates society. It inspires, comforts, and challenges. Contribution credits recognize the labor of imagination. Meritcommons honors your skill, dedication, and insight.</p>
+                <p>Art sustains the mind and nurtures the spirit. A society without it is blind and hollow. Meritcommons ensures that expression, beauty, and culture are not luxuries, but pillars of civilization.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 10 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter X: A Call to Innovate</h2>
+                <p class="first-letter">To those who imagine, invent, and improve: your courage reshapes the world. Every solution, every creation, every method that improves life is immortalized in the recognition of Meritcommons.</p>
+                <p>Innovation is the engine of progress. Without it, labor stagnates, art decays, society falters. Meritcommons celebrates inventors, weights their contribution, and records their achievement for all to see.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 11 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter XI: A Call to Governance</h2>
+                <p class="first-letter">To those who serve as arbitrators, council members, and overseers: power is responsibility. Authority is a duty. Transparency is law. Justice is sacred.</p>
+                <p>Meritcommons entrusts governance to citizens, rotates responsibility, and demands accountability. All decisions are public. All actions are scrutinized. No one rules permanently, and no one is beyond judgment.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 12 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter XII: A Call to Justice</h2>
+                <p class="first-letter">To those who uphold integrity, who report fraud, who defend fairness: your vigilance is valued. Meritcommons requires honesty, discernment, and courage in the pursuit of balance.</p>
+                <p>False reporting diminishes credibility. Truth is rewarded. Justice is public, fair, and restorative. Meritcommons enforces not to punish, but to uphold the principle that society thrives when effort, creativity, and innovation are valued.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- CHAPTER 13 -->
+            <div class="chapter">
+                <h2 class="chapter-title">Chapter XIII: The Vision of Meritcommons</h2>
+                <p class="first-letter">Meritcommons envisions a society where effort is meaningful, creation is celebrated, and innovation is exalted. Governance serves the people. Resources flow to those who labor, create, and invent. Justice is transparent, fair, and humane.</p>
+                <p>It is imperfect, for humanity is imperfect. Yet it is alive. It is just. It is a living testament to the power of work, the dignity of creativity, and the transformative power of invention.</p>
+                <div class="ornament">* * *</div>
+            </div>
+            
+            <!-- EPILOGUE -->
+            <div class="chapter">
+                <h2 class="chapter-title">Epilogue: The Era of Contribution</h2>
+                <p class="first-letter">To those who labor, create, and invent: your efforts define society. To those who govern, arbitrate, and oversee: your responsibility is sacred.</p>
+                <p>Meritcommons endures because it is built upon what humans do best their work, their skill, and their creativity.</p>
+                <p>Rise, contribute, create. Meritcommons is your world. Build it, shape it, honor it.</p>
+                <p>Work. Create. Invent. Govern. Uphold justice. Recognize contribution. Meritcommons has begun.</p>
+                <p>The era of true effort has arrived. The age of contribution is here.</p>
+            </div>
+        </div>
         
-        // Store test data
-        await puter.kv.set(testKey, testValue);
-        console.log('Test data stored');
-        
-        // Retrieve test data
-        const retrieved = await puter.kv.get(testKey);
-        console.log('Test data retrieved:', retrieved);
-        
-        // Clean up
-        await puter.kv.del(testKey);
-        console.log('Test cleanup complete');
-        
-        return true;
-    } catch (error) {
-        console.error('KV store test failed:', error);
-        return false;
-    }
-}
-
-// Sanitize HTML to prevent XSS attacks
-function sanitizeHTML(str) {
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
-}
-
-function showStatusMessage(message, type = "error") {
-    const statusDiv = document.getElementById("statusMessages");
-    const className = type === 'success' ? 'success' : 'error';
-    statusDiv.innerHTML = `<div class="status-message ${className}">${message}</div>`;
-    setTimeout(() => {
-        statusDiv.innerHTML = "";
-    }, 4000);
-}
-</script>
-
+        <footer>
+            <p>&copy; 2025 Author. All rights reserved.</p>
+        </footer>
+    </div>
 </body>
 </html>
